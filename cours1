@@ -1,0 +1,21 @@
+SELECT
+    a.num_automate,
+    MIN(
+        -- Formule haversine : distance en km entre deux points GPS
+        2 * 6371 * ASIN(
+            SQRT(
+                POWER(SIN(RADIANS(b.latitude - a.latitude) / 2), 2)
+                + COS(RADIANS(a.latitude)) * COS(RADIANS(b.latitude))
+                * POWER(SIN(RADIANS(b.longitude - a.longitude) / 2), 2)
+            )
+        )
+    ) AS distance_gab_plus_proche_km
+ 
+FROM `dss_fallback_lbp_dp`.`referentiel_gab_corrige` a
+JOIN `dss_fallback_lbp_dp`.`referentiel_gab_corrige` b
+    ON a.num_automate != b.num_automate
+WHERE a.longitude IS NOT NULL AND a.latitude IS NOT NULL
+  AND b.longitude IS NOT NULL AND b.latitude IS NOT NULL
+ 
+GROUP BY a.num_automate
+;
