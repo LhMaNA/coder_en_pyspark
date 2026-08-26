@@ -1,1 +1,2 @@
-print(df_clust.groupby("nom_famille")["num_automate"].nunique())
+famille_dominante_par_gab = df_clust.groupby("num_automate")["nom_famille"].agg(lambda x: x.mode()[0])
+print(famille_dominante_par_gab.value_counts())
