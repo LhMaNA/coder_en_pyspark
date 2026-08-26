@@ -1,2 +1,3 @@
-print(signature.loc[[0, 1, 2, 3], ["ret_nb_log", "ret_pct_weekend", "taux_reseau_exotique_pct", "taux_inaboutis_pct"]])
-print(df_clust["famille_id"].value_counts())
+tableau_familles = df_clust.groupby("nom_famille").size().reset_index(name="effectif")
+tableau_familles["pct_du_total"] = (tableau_familles["effectif"] / len(df_clust) * 100).round(1)
+print(tableau_familles.sort_values("effectif", ascending=False))
