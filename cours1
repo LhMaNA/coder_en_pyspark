@@ -1,21 +1,40 @@
-SELECT
-    a.num_automate,
-    MIN(
-        -- Formule haversine : distance en km entre deux points GPS
-        2 * 6371 * ASIN(
-            SQRT(
-                POWER(SIN(RADIANS(b.latitude - a.latitude) / 2), 2)
-                + COS(RADIANS(a.latitude)) * COS(RADIANS(b.latitude))
-                * POWER(SIN(RADIANS(b.longitude - a.longitude) / 2), 2)
-            )
-        )
-    ) AS distance_gab_plus_proche_km
- 
-FROM `dss_fallback_lbp_dp`.`referentiel_gab_corrige` a
-JOIN `dss_fallback_lbp_dp`.`referentiel_gab_corrige` b
-    ON a.num_automate != b.num_automate
-WHERE a.longitude IS NOT NULL AND a.latitude IS NOT NULL
-  AND b.longitude IS NOT NULL AND b.latitude IS NOT NULL
- 
-GROUP BY a.num_automate
-;
+def nommer_familles_final(signature_familles: pd.DataFrame) -> dict:
+    """Nomme les clusters de façon relative, jamais par seuil fixe.
+
+    Compare les clusters ENTRE EUX (pas à un seuil absolu qui peut être
+    raté de justesse) : garantit un nom distinct pour chaque cluster,
+    quel que soit le nombre de clusters ou le dataset utilisé.
+    """
+    ids_restants = list(signature_familles.index)
+    noms = {}
+
+    # 1. Le cluster avec le taux d'incidents le plus élevé
+    id_incidents = signature_familles.loc[ids_restants, "taux_inaboutis_pct"].idxmax()
+    noms[id_incidents] = "Incidents élevés"
+    ids_restants.remove(id_incidents)
+
+    # 2. Parmi ceux qui restent, celui avec le score touristique le plus élevé
+    #    (weekend + exotique combinés, en valeurs standardisées pour être comparables)
+    score_touristique = (
+        (signature_familles.loc[ids_restants, "ret_pct_weekend"] - signature_familles["ret_pct_weekend"].mean())
+        / signature_familles["ret_pct_weekend"].std()
+        + (signature_familles.loc[ids_restants, "taux_reseau_exotique_pct"] - signature_familles["taux_reseau_exotique_pct"].mean())
+        / signature_familles["taux_reseau_exotique_pct"].std()
+    )
+    id_touristique = score_touristique.idxmax()
+    noms[id_touristique] = "Touristique"
+    ids_restants.remove(id_touristique)
+
+    # 3. Les clusters restants : classés par volume, du plus fort au plus faible
+    restants_tries = signature_familles.loc[ids_restants, "ret_nb_log"].sort_values(ascending=False)
+    labels_volume = ["Actif standard - fort volume", "Actif standard - volume modéré",
+                      "Actif standard - faible volume"]
+    for i, cluster_id in enumerate(restants_tries.index):
+        noms[cluster_id] = labels_volume[min(i, len(labels_volume) - 1)]
+
+    return noms
+
+# Utilisation :
+noms_familles_dynamiques = nommer_familles_final(signature_familles)
+df_clust["nom_famille"] = df_clust["famille_id"].map(noms_familles_dynamiques)
+print(noms_familles_dynamiques)
