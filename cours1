@@ -1,3 +1,1 @@
-tableau_familles = df_clust.groupby("nom_famille").size().reset_index(name="effectif")
-tableau_familles["pct_du_total"] = (tableau_familles["effectif"] / len(df_clust) * 100).round(1)
-print(tableau_familles.sort_values("effectif", ascending=False))
+print(df_clust.groupby("nom_famille")["num_automate"].nunique())
