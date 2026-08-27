@@ -1,2 +1,40 @@
-famille_dominante_par_gab = df_clust.groupby("num_automate")["nom_famille"].agg(lambda x: x.mode()[0])
-print(famille_dominante_par_gab.value_counts())
+# ============================================================
+# CELLULE DESCRIPTIVE DU DATASET
+# ============================================================
+
+print("=== DIMENSIONS ===")
+print(f"Nombre de lignes : {len(df_clust)}")
+print(f"Nombre de GAB distincts : {df_clust['num_automate'].nunique()}")
+print(f"Période couverte : {df_clust['date'].min()} → {df_clust['date'].max()}")
+print()
+
+print("=== COLONNES ET TYPES ===")
+print(df_clust.dtypes)
+print()
+
+print("=== VALEURS MANQUANTES ===")
+print(df_clust.isna().sum()[df_clust.isna().sum() > 0])
+print()
+
+print("=== STATUT GAB ===")
+print(df_clust["statut_gab"].value_counts())
+print()
+
+print("=== STATISTIQUES DES FEATURES DE CLUSTERING ===")
+print(df_clust[features_clustering_dispo].describe().T)
+print()
+
+print("=== SKEW ET % DE ZEROS (deja calcule ailleurs, rappel ici) ===")
+for col in features_clustering_dispo:
+    skew = df_clust[col].skew()
+    pct_zero = (df_clust[col] == 0).mean() * 100
+    print(f"{col:35s} skew={skew:6.2f}  zeros={pct_zero:5.1f}%")
+print()
+
+print("=== CORRELATION ENTRE FEATURES (deja calcule ailleurs, rappel) ===")
+print(df_clust[features_clustering_dispo].corr().round(2))
+print()
+
+print("=== REPARTITION ACTUELLE DES FAMILLES ===")
+print(df_clust["nom_famille"].value_counts())
+print(df_clust.groupby("nom_famille")["num_automate"].nunique())
