@@ -1,4 +1,144 @@
-# ============================================================
+Cellule A — nouvelle fonction (colle-la dans une nouvelle cellule, n'importe où avant l'orchestration, par exemple juste après construire_colonne_date) :
+
+
+def deriver_coefficient_variation_montant(
+    df: pd.DataFrame,
+    colonne_stddev: str = "ret_montant_stddev",
+    colonne_moyenne: str = "ret_montant_moyen",
+) -> pd.DataFrame:
+    """Derive un coefficient de variation des montants retires (regularite d'usage)."""
+    df = df.copy()
+    moyenne_non_nulle = df[colonne_moyenne].replace(0, np.nan)
+    cv = df[colonne_stddev] / moyenne_non_nulle
+    df["cv_montant_retrait"] = cv.fillna(0).clip(lower=0)
+    return df
+Cellule B — dans ton orchestration, ajoute df = deriver_coefficient_variation_montant(df) juste après df = construire_colonne_date(df) et avant appliquer_log_transform.
+
+Cellule C — dans FEATURES_CLUSTERING, ajoute "cv_montant_retrait" à la liste.
+
+Bash Extract the two diagnostic functions
+IN
+cd "c:/Users/hende/Downloads/clustering" && python3 -c "
+import json
+with open('notebook_master_vue_journaliere_v2.ipynb', encoding='utf-8') as f:
+    nb = json.load(f)
+for c in nb['cells']:
+    src = ''.join(c['source'])
+    if 'def evaluer_pouvoir_discriminant_features' in src:
+        idx = src.index('def evaluer_pouvoir_discriminant_features')
+        idx_fin = src.index('def identifier_paires_indiscernables')
+        with open('_tmp_fn1.txt', 'w', encoding='utf-8') as fh:
+            fh.write(src[idx:idx_fin])
+    if 'def identifier_paires_indiscernables' in src:
+        idx2 = src.index('def identifier_paires_indiscernables')
+        idx2_fin = src.index('NOMS_LISIBLES_COLONNES = {')
+        with open('_tmp_fn2.txt', 'w', encoding='utf-8') as fh:
+            fh.write(src[idx2:idx2_fin])
+"
+
+OUT
+(Bash completed with no output)
+Read _tmp_fn1.txt
+Read _tmp_fn2.txt
+Cellule D — les 2 fonctions de diagnostic (colle-les ensemble dans une nouvelle cellule, n'importe où avant leur appel — par exemple juste après la définition de calculer_signature_familles) :
+
+
+def evaluer_pouvoir_discriminant_features(
+    X: pd.DataFrame, labels: np.ndarray,
+) -> pd.DataFrame:
+    """Mesure la capacite reelle de chaque feature a separer les clusters trouves."""
+    labels = np.asarray(labels)
+    variance_totale = X.var(ddof=0)
+
+    moyennes_par_cluster = X.groupby(labels).mean()
+    effectifs_par_cluster = pd.Series(labels).value_counts().sort_index()
+    moyenne_globale = X.mean()
+
+    variance_inter = pd.Series(0.0, index=X.columns)
+    for cluster_id in moyennes_par_cluster.index:
+        ecart = moyennes_par_cluster.loc[cluster_id] - moyenne_globale
+        variance_inter += effectifs_par_cluster.loc[cluster_id] * (ecart ** 2)
+    variance_inter /= len(X)
+
+    variance_intra = variance_totale - variance_inter
+    variance_intra = variance_intra.clip(lower=1e-12)
+
+    ratio = variance_inter / variance_intra
+
+    resultats = pd.DataFrame({
+        "feature": X.columns,
+        "variance_inter_cluster": variance_inter.values.round(4),
+        "variance_intra_cluster": variance_intra.values.round(4),
+        "ratio_discriminant": ratio.values.round(4),
+    }).sort_values("ratio_discriminant", ascending=False).reset_index(drop=True)
+
+    seuil_faible = resultats["ratio_discriminant"].quantile(0.25)
+    resultats["feature_faible"] = resultats["ratio_discriminant"] <= seuil_faible
+
+    return resultats
+
+
+def identifier_paires_indiscernables(
+    X: pd.DataFrame, labels: np.ndarray, seuil_ecart_reduit: float = 0.5,
+) -> pd.DataFrame:
+    """Pour chaque paire de clusters, identifie les features qui ne les distinguent pas."""
+    labels = np.asarray(labels)
+    moyennes = X.groupby(labels).mean()
+    ecarts_types_globaux = X.std(ddof=0)
+    clusters = sorted(set(labels))
+
+    resultats = []
+    for i in range(len(clusters)):
+        for j in range(i + 1, len(clusters)):
+            c1, c2 = clusters[i], clusters[j]
+            ecart_normalise = (moyennes.loc[c1] - moyennes.loc[c2]).abs() / ecarts_types_globaux
+            indiscernables = ecart_normalise[ecart_normalise < seuil_ecart_reduit].index.tolist()
+            discriminantes = ecart_normalise[ecart_normalise >= seuil_ecart_reduit].sort_values(
+                ascending=False
+            )
+            resultats.append({
+                "cluster_1": c1,
+                "cluster_2": c2,
+                "nb_features_indiscernables": len(indiscernables),
+                "features_indiscernables": ", ".join(indiscernables) if indiscernables else "(aucune)",
+                "feature_la_plus_discriminante": (
+                    discriminantes.index[0] if len(discriminantes) else "(aucune)"
+                ),
+            })
+
+    return pd.DataFrame(resultats).sort_values(
+        "nb_features_indiscernables", ascending=False
+    ).reset_index(drop=True)
+Cellule E — l'appel des diagnostics, juste après ta cellule de bootstrap (tester_stabilite_bootstrap/ARI moyen), avant le nommage dynamique :
+
+
+diagnostic_discriminant = evaluer_pouvoir_discriminant_features(X, labels)
+print("Pouvoir discriminant de chaque feature (ratio variance inter/intra-cluster) :")
+display(diagnostic_discriminant)
+features_faibles = diagnostic_discriminant.loc[diagnostic_discriminant["feature_faible"], "feature"].tolist()
+if features_faibles:
+    print(f"Features a faible pouvoir discriminant (candidates a retirer/repondingerer) : {features_faibles}")
+else:
+    print("Aucune feature nettement plus faible que les autres.")
+
+diagnostic_paires = identifier_paires_indiscernables(X, labels)
+print()
+print("Paires de clusters les moins bien separees (le plus de features indiscernables en tete) :")
+display(diagnostic_paires)
+Cellule F — rendre la signature visible, dans ta cellule existante qui fait signature = calculer_signature_familles(...), ajoute juste après :
+
+
+print("Signature complete des", K_FAMILLES, "clusters (moyenne de chaque feature, avant tout nommage) :")
+display(signature)
+Bash Clean up temp extraction files
+IN
+rm -f "c:/Users/hende/Downloads/clustering/_tmp_cv_function.txt" "c:/Users/hende/Downloads/clustering/_tmp_fn1.txt" "c:/Users/hende/Downloads/clustering/_tmp_fn2.txt"
+
+OUT
+(Bash completed with no output)
+Résumé de l'ordre à respecter (A → F) : la fonction et l'appel de cv_montant_retrait doivent être avant le calcul de X (la matrice standardisée) et FEATURES_CLUSTERING doit inclure cv_montant_retrait avant l'entraînement K-Means. Les diagnostics (D, E) et l'affichage signature (F) doivent venir après l'entraînement K-Means, avant ou pendant le nommage.
+
+Colle ça, relance tout, et montre-moi les 3 sorties dès que tu les as.# ============================================================
 # CELLULE DESCRIPTIVE DU DATASET
 # ============================================================
 
