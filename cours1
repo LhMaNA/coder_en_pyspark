@@ -1,27 +1,10 @@
-def analyser_colinearite_features(
-    X: pd.DataFrame, seuil_alerte: float = 0.85
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Detecte les paires de features fortement correlees avant clustering."""
-    colonnes_constantes = X.columns[X.std(ddof=0) == 0].tolist()
-    if colonnes_constantes:
-        print(f"ATTENTION : colonnes a variance nulle exclues de la correlation : {colonnes_constantes}")
-    X_sans_constantes = X.drop(columns=colonnes_constantes)
-    matrice_correlation = X_sans_constantes.corr()
-
-    paires_alerte = []
-    colonnes = matrice_correlation.columns
-    for i in range(len(colonnes)):
-        for j in range(i + 1, len(colonnes)):
-            valeur = matrice_correlation.iloc[i, j]
-            if abs(valeur) > seuil_alerte:
-                paires_alerte.append({
-                    "feature_1": colonnes[i],
-                    "feature_2": colonnes[j],
-                    "correlation": round(valeur, 3),
-                })
-    df_alertes = pd.DataFrame(paires_alerte).sort_values(
-        "correlation", key=abs, ascending=False
-    ).reset_index(drop=True) if paires_alerte else pd.DataFrame(
-        columns=["feature_1", "feature_2", "correlation"]
-    )
-    return matrice_correlation, df_alertes
+df = charger_fiche_identite(NOM_DATASET_SOURCE)
+print("Apres chargement :", len(df), "lignes")
+df = filtrer_perimetre_metropole(df)
+print("Apres filtre metropole :", len(df), "lignes")
+df = filtrer_gab_actifs(df)
+print("Apres filtre actifs :", len(df), "lignes")
+df = construire_colonne_date(df)
+print("Apres construction date :", len(df), "lignes")
+df = deriver_coefficient_variation_montant(df)
+df, colonnes_log = appliquer_log_transform(df, FEATURES_A_LOGGER)
