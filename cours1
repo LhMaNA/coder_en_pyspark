@@ -1,10 +1,28 @@
-df = charger_fiche_identite(NOM_DATASET_SOURCE)
-print("Apres chargement :", len(df), "lignes")
-df = filtrer_perimetre_metropole(df)
-print("Apres filtre metropole :", len(df), "lignes")
-df = filtrer_gab_actifs(df)
-print("Apres filtre actifs :", len(df), "lignes")
-df = construire_colonne_date(df)
-print("Apres construction date :", len(df), "lignes")
-df = deriver_coefficient_variation_montant(df)
-df, colonnes_log = appliquer_log_transform(df, FEATURES_A_LOGGER)
+Subject: Candidature après mon alternance – projet de thèse CIFRE (de la part de Monica [Nom])
+
+Bonjour Madame,
+
+J'espère que vous allez bien.
+
+Je vous écris de la part de Monica [Nom], qui vous a parlé du projet que j'aimerais réaliser au sein de La Banque Postale et qui m'a recommandée auprès de vous. C'est ce qui m'encourage à vous envoyer directement ma candidature.
+
+Pour information, je suis actuellement alternante data à la Direction des Paiements, dans l'équipe data d'Hervé [Nom], depuis plus d'un an et demi. J'y travaille sur des projets d'analyse de données et de reporting liés aux activités de paiement.
+
+Mon contrat d'alternance se termine fin novembre 2026. J'aimerais beaucoup rester à La Banque Postale après cette date. C'est un environnement où je me plais vraiment et où j'ai beaucoup appris, et je pense qu'il me reste encore beaucoup à y apprendre. Je suis donc ouverte à toute proposition pour y rester, que ce soit un CDD ou un CDI, et notamment pour un projet qui m'intéresse beaucoup et qui consiste à réaliser une thèse CIFRE.
+
+La CIFRE est un contrat tripartite, entre un doctorant, un laboratoire de recherche public et une entreprise. Le doctorant est salarié de l'entreprise pendant trois ans et mène, pendant ces trois ans, des travaux de recherche sur un sujet choisi par l'entreprise et utile à celle-ci. Le but n'est donc pas de faire uniquement de la recherche théorique, mais de trouver une solution concrète à un besoin réel, avec l'appui scientifique d'un laboratoire.
+
+En me renseignant, j'ai vu que ce dispositif est très avantageux pour l'entreprise. L'État finance en effet une grande partie du projet : via l'ANRT, il verse à l'entreprise 14 000 € par an pendant trois ans, soit 42 000 € au total, et le reste du coût est éligible au Crédit d'Impôt Recherche. Ces trois années permettent aussi de traiter un sujet en profondeur, ce qu'un projet court ne permet pas.
+
+J'ai également vu que plusieurs banques utilisent déjà ce dispositif, en particulier sur des sujets data et IA : BNP Paribas et Crédit Agricole ont par exemple monté des thèses CIFRE sur la détection de fraude, le machine learning appliqué à la finance ou les modèles de risque. Je pense donc que ce serait tout aussi avantageux pour La Banque Postale.
+
+Vous trouverez ci-joint mon CV ainsi qu'une présentation qui explique le projet plus en détail.
+
+Je reste disponible si vous souhaitez en parler ou faire un point dessus.
+
+Je vous remercie en tout cas pour votre attention et vous souhaite une excellente fin de journée.
+
+Bien cordialement,
+
+Marya [Nom]
+[Téléphone] – [Email]
