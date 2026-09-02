@@ -1,28 +1,93 @@
-Subject: Candidature après mon alternance – projet de thèse CIFRE (de la part de Monica [Nom])
+-- ============================================================================
+-- RECETTE 1/3 : extraire les BIN distincts (6 et 8 chiffres) de la table
+-- de retraits (400M lignes). Le but : ne garder que les valeurs UNIQUES
+-- de bin_clean, pour ne faire le matching couteux (BIN -> pays) qu'une
+-- seule fois par valeur distincte, pas 400 millions de fois.
+-- ============================================================================
 
-Bonjour Madame,
+SELECT DISTINCT
+    CASE WHEN SUBSTR(num_carte, 7, 2) = 'XX' THEN SUBSTR(num_carte, 1, 6) ELSE SUBSTR(num_carte, 1, 8) END AS bin_clean,
+    CASE WHEN SUBSTR(num_carte, 7, 2) = 'XX' THEN 6 ELSE 8 END AS bin_type
 
-J'espère que vous allez bien.
+FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1`
+;
 
-Je vous écris de la part de Monica [Nom], qui vous a parlé du projet que j'aimerais réaliser au sein de La Banque Postale et qui m'a recommandée auprès de vous. C'est ce qui m'encourage à vous envoyer directement ma candidature.
 
-Pour information, je suis actuellement alternante data à la Direction des Paiements, dans l'équipe data d'Hervé [Nom], depuis plus d'un an et demi. J'y travaille sur des projets d'analyse de données et de reporting liés aux activités de paiement.
 
-Mon contrat d'alternance se termine fin novembre 2026. J'aimerais beaucoup rester à La Banque Postale après cette date. C'est un environnement où je me plais vraiment et où j'ai beaucoup appris, et je pense qu'il me reste encore beaucoup à y apprendre. Je suis donc ouverte à toute proposition pour y rester, que ce soit un CDD ou un CDI, et notamment pour un projet qui m'intéresse beaucoup et qui consiste à réaliser une thèse CIFRE.
+-------------------------------------------------------------------------------------
 
-La CIFRE est un contrat tripartite, entre un doctorant, un laboratoire de recherche public et une entreprise. Le doctorant est salarié de l'entreprise pendant trois ans et mène, pendant ces trois ans, des travaux de recherche sur un sujet choisi par l'entreprise et utile à celle-ci. Le but n'est donc pas de faire uniquement de la recherche théorique, mais de trouver une solution concrète à un besoin réel, avec l'appui scientifique d'un laboratoire.
 
-En me renseignant, j'ai vu que ce dispositif est très avantageux pour l'entreprise. L'État finance en effet une grande partie du projet : via l'ANRT, il verse à l'entreprise 14 000 € par an pendant trois ans, soit 42 000 € au total, et le reste du coût est éligible au Crédit d'Impôt Recherche. Ces trois années permettent aussi de traiter un sujet en profondeur, ce qu'un projet court ne permet pas.
+-- ============================================================================
+-- RECETTE 2/3 : matcher chaque BIN distinct (sortie de la recette 1,
+-- quelques dizaines/centaines de milliers de lignes seulement) au pays,
+-- via la table de plages BIN. BIN8 en priorite, repli automatique sur
+-- BIN6 si pas de match en 8 chiffres.
+-- C'est ICI que se fait le matching couteux (jointure par intervalle) -
+-- mais sur un volume tres reduit, donc rapide.
+-- ============================================================================
 
-J'ai également vu que plusieurs banques utilisent déjà ce dispositif, en particulier sur des sujets data et IA : BNP Paribas et Crédit Agricole ont par exemple monté des thèses CIFRE sur la détection de fraude, le machine learning appliqué à la finance ou les modèles de risque. Je pense donc que ce serait tout aussi avantageux pour La Banque Postale.
+SELECT
+    bd.bin_clean,
+    bd.bin_type,
+    COALESCE(m8.pays, m6.pays) AS pays,
+    CASE
+        WHEN COALESCE(m8.pays, m6.pays) IS NULL THEN NULL
+        WHEN COALESCE(m8.pays, m6.pays) = 'FRA' THEN 0
+        ELSE 1
+    END AS flag_etranger
 
-Vous trouverez ci-joint mon CV ainsi qu'une présentation qui explique le projet plus en détail.
+FROM `dss_fallback_lbp_dp`.`bin_distincts` bd
 
-Je reste disponible si vous souhaitez en parler ou faire un point dessus.
+-- Jointure BIN8 : match precis, uniquement si bin_type=8
+LEFT JOIN (
+    SELECT
+        CAST(SUBSTR(pi_trmin, 1, 8) AS BIGINT) AS bin8_min,
+        CAST(SUBSTR(pi_trmax, 1, 8) AS BIGINT) AS bin8_max,
+        UPPER(TRIM(pi_cdpays)) AS pays
+    FROM `dss_fallback_lbp_dp`.`t_lbp_mon_bin8_h`
+    WHERE pi_daeffet <= '2026-01-01' AND pi_dafin > '2025-12-31'
+      AND pi_trmin IS NOT NULL AND pi_trmax IS NOT NULL
+) m8
+    ON bd.bin_type = 8
+   AND CAST(bd.bin_clean AS BIGINT) BETWEEN m8.bin8_min AND m8.bin8_max
 
-Je vous remercie en tout cas pour votre attention et vous souhaite une excellente fin de journée.
+-- Jointure BIN6 : repli, applicable a tous (bin_type=6 direct, bin_type=8 en secours via les 6 premiers chiffres)
+LEFT JOIN (
+    SELECT
+        CAST(SUBSTR(pi_trmin, 1, 6) AS BIGINT) AS bin6_min,
+        CAST(SUBSTR(pi_trmax, 1, 6) AS BIGINT) AS bin6_max,
+        UPPER(TRIM(pi_cdpays)) AS pays
+    FROM `dss_fallback_lbp_dp`.`t_lbp_mon_bin8_h`
+    WHERE pi_daeffet <= '2026-01-01' AND pi_dafin > '2025-12-31'
+      AND pi_trmin IS NOT NULL AND pi_trmax IS NOT NULL
+) m6
+    ON CAST(SUBSTR(bd.bin_clean, 1, 6) AS BIGINT) BETWEEN m6.bin6_min AND m6.bin6_max
+;
 
-Bien cordialement,
 
-Marya [Nom]
-[Téléphone] – [Email]
+
+-------------------------------------------------------------------------------------------
+
+
+-- ============================================================================
+-- RECETTE 3/3 : rejoindre le resultat BIN -> pays (sortie de la recette 2,
+-- petit volume) a la table complete de 400M lignes.
+-- Jointure PAR EGALITE simple (bin_clean = bin_clean), PAS un BETWEEN -
+-- c'est ce qui la rend rapide meme a 400M lignes : Hive peut faire un
+-- hash join efficace sur une egalite, contrairement a une comparaison
+-- d'intervalle.
+-- ============================================================================
+
+SELECT
+    r.*,
+    CASE WHEN SUBSTR(r.num_carte, 7, 2) = 'XX' THEN SUBSTR(r.num_carte, 1, 6) ELSE SUBSTR(r.num_carte, 1, 8) END AS bin_clean,
+    CASE WHEN SUBSTR(r.num_carte, 7, 2) = 'XX' THEN 6 ELSE 8 END AS bin_type,
+    bp.pays,
+    bp.flag_etranger
+
+FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1` r
+
+LEFT JOIN `dss_fallback_lbp_dp`.`bin_distincts_pays` bp
+    ON (CASE WHEN SUBSTR(r.num_carte, 7, 2) = 'XX' THEN SUBSTR(r.num_carte, 1, 6) ELSE SUBSTR(r.num_carte, 1, 8) END) = bp.bin_clean
+   AND (CASE WHEN SUBSTR(r.num_carte, 7, 2) = 'XX' THEN 6 ELSE 8 END) = bp.bin_type
+;
