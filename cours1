@@ -1,1 +1,29 @@
 
+SELECT
+    brut.cl8,
+
+    -- Timestamps table brute
+    brut.timestamp_1        AS brut_timestamp_1,
+    brut.timestamp_2        AS brut_timestamp_2,
+
+    -- Timestamps table avec correction UTC
+    utc.timestamp_1         AS utc_corrige_timestamp_1,
+    utc.timestamp_2         AS utc_corrige_timestamp_2,
+
+    -- Timestamps table sans correction UTC
+    sans_utc.timestamp_1    AS sans_utc_timestamp_1,
+    sans_utc.timestamp_2    AS sans_utc_timestamp_2,
+
+    -- Differences entre brut et corrige UTC
+    (utc.timestamp_1 - brut.timestamp_1)         AS diff_utc_corrige_ts1,
+    (sans_utc.timestamp_1 - brut.timestamp_1)    AS diff_sans_utc_ts1
+
+FROM table_brute brut
+
+LEFT JOIN table_avec_utc utc
+    ON brut.cl8 = utc.cl8
+
+LEFT JOIN table_sans_utc sans_utc
+    ON brut.cl8 = sans_utc.cl8
+
+LIMIT 100
