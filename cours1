@@ -1,29 +1,20 @@
+Bonjour,
 
-SELECT
-    brut.cl8,
+J'espère que vous allez bien et que cette semaine se passe bien de votre côté !
 
-    -- Timestamps table brute
-    brut.timestamp_1        AS brut_timestamp_1,
-    brut.timestamp_2        AS brut_timestamp_2,
+Je me permets de vous faire parvenir en pièce jointe le fichier Excel concernant l'analyse des timestamps.
 
-    -- Timestamps table avec correction UTC
-    utc.timestamp_1         AS utc_corrige_timestamp_1,
-    utc.timestamp_2         AS utc_corrige_timestamp_2,
+Vous y retrouverez les données brutes telles qu'elles ont été envoyées par Stéphane Delonnoy, ainsi que deux versions des données importées dans le datalake.
 
-    -- Timestamps table sans correction UTC
-    sans_utc.timestamp_1    AS sans_utc_timestamp_1,
-    sans_utc.timestamp_2    AS sans_utc_timestamp_2,
+Pour vous expliquer le contexte, lors de l'importation d'une table sur Dataiku, une option est proposée permettant de cocher ou non la correction UTC. Concrètement, lorsque cette case est cochée, Dataiku ajoute automatiquement deux heures aux timestamps de la table importée. Pour vous permettre de comparer les deux comportements, j'ai donc inclus dans le fichier une version avec cette correction activée et une version sans. À vous de voir laquelle correspond à ce qui est attendu de votre côté.
 
-    -- Differences entre brut et corrige UTC
-    (utc.timestamp_1 - brut.timestamp_1)         AS diff_utc_corrige_ts1,
-    (sans_utc.timestamp_1 - brut.timestamp_1)    AS diff_sans_utc_ts1
+Par ailleurs, vous remarquerez que le fichier contient davantage de lignes que dans les données brutes. Cela s'explique par la présence de doublons sur 4 roues. J'ai fait le choix de les conserver car certains présentent des informations différentes, notamment concernant le circuit — il me semblait important de ne rien perdre à ce stade.
 
-FROM table_brute brut
+Je vous transmets également le lien vers le formulaire ci-dessous — il reste nécessaire de le compléter.
 
-LEFT JOIN table_avec_utc utc
-    ON brut.cl8 = utc.cl8
+[Lien formulaire à insérer]
 
-LEFT JOIN table_sans_utc sans_utc
-    ON brut.cl8 = sans_utc.cl8
+N'hésitez pas à me solliciter pour tout complément ou si vous souhaitez qu'on en discute ensemble.
 
-LIMIT 100
+Belle journée à vous,
+
