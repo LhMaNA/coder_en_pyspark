@@ -1,13 +1,1 @@
-Voilà les titres proposés :
 
-Table 1 — Données brutes
-
-Données brutes transmises par Stéphane Delonnoy
-
-Table 2 — Données importées avec correction UTC
-
-Données après importation dans Dataiku — correction UTC activée (timestamps +2h)
-
-Table 3 — Données importées sans correction UTC
-
-Données après importation dans Dataiku — correction UTC désactivée (timestamps d'origine)
