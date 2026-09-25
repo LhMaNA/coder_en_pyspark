@@ -1,1 +1,146 @@
+import dataiku
+from dataiku import spark as dkuspark
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import LongType, IntegerType
+from pyspark.sql.functions import row_number
+from pyspark.sql.window import Window
+from pyspark import SparkConf
 
+# TODO CONFIRMER : nom exact de la colonne pays dans la table BIN
+COL_PAYS = "pi_cdpays"
+
+# TODO PARAMETRER : mois/annee a analyser (aligne sur la demande monetique)
+ANNEE_CIBLE = 2026
+MOIS_CIBLE = 9  # septembre
+
+# ------------------------------------------------------------------
+# SPARK SESSION - config deja stabilisee sur ce projet
+# ------------------------------------------------------------------
+config = SparkConf().setAll([
+    ('spark.executor.instances', '40'),
+    ('spark.executor.cores', '4'),
+    ('spark.executor.memory', '8g'),
+    ('spark.executor.memoryOverhead', '4g'),
+    ('spark.driver.memory', '8g'),
+    ('spark.driver.memoryOverhead', '2g'),
+    ('spark.sql.shuffle.partitions', '400'),
+    ('spark.sql.adaptive.enabled', 'true'),
+    ('spark.sql.adaptive.coalescePartitions.enabled', 'true'),
+    ('spark.network.timeout', '600s'),
+    ('spark.dynamicAllocation.enabled', 'false'),
+])
+
+spark = SparkSession.builder.config(conf=config).enableHiveSupport().getOrCreate()
+
+# ------------------------------------------------------------------
+# LECTURE - table de retrait habituelle
+# TODO CONFIRMER : nom exact du dataset
+# ------------------------------------------------------------------
+retrait = dkuspark.get_dataframe(spark, dataiku.Dataset("reporting_t_dlk_mon_nf2_ope_retrait_v1"))
+bins = dkuspark.get_dataframe(spark, dataiku.Dataset("t_lbp_mon_bin8_h"))
+
+# ------------------------------------------------------------------
+# FILTRE : periode cible + uniquement Visa et Mastercard
+# type_reseau '01' = Visa, '02' = Mastercard (deja etabli dans le
+# mapping cat_reseau utilise ailleurs sur ce projet)
+# ------------------------------------------------------------------
+retrait = retrait.withColumn("annee", F.substring("date_operation", 5, 4).cast(IntegerType()))
+retrait = retrait.withColumn("mois", F.substring("date_operation", 3, 2).cast(IntegerType()))
+
+retrait = retrait.filter(
+    (F.col("annee") == ANNEE_CIBLE) &
+    (F.col("mois") == MOIS_CIBLE) &
+    (F.col("lib_ope").isin(["Retrait", "Autorisation-Retrait"])) &
+    (F.col("type_reseau").isin(["01", "02"]))
+)
+
+retrait = retrait.withColumn(
+    "reseau",
+    F.when(F.col("type_reseau") == "01", "Visa").otherwise("Mastercard")
+)
+
+# ------------------------------------------------------------------
+# BIN_CLEAN / BIN_TYPE
+# ------------------------------------------------------------------
+retrait = retrait.withColumn("pos78", F.substring("num_carte", 7, 2))
+retrait = retrait.withColumn(
+    "bin_clean",
+    F.when(retrait.pos78 == "XX", F.substring("num_carte", 1, 6))
+     .otherwise(F.substring("num_carte", 1, 8))
+)
+retrait = retrait.withColumn(
+    "bin_type",
+    F.when(retrait.pos78 == "XX", F.lit(6)).otherwise(F.lit(8))
+)
+retrait = retrait.drop("pos78")
+
+# ------------------------------------------------------------------
+# BINS - preparation, dedup, colonne pays
+# ------------------------------------------------------------------
+bins = bins.filter("pi_daeffet <= '2026-01-01' AND pi_dafin > '2025-12-31'")
+bins = bins.filter(bins.pi_trmin.isNotNull())
+bins = bins.filter(bins.pi_trmax.isNotNull())
+
+bins = bins.withColumn("bin6_min", F.substring("pi_trmin", 1, 6).cast(LongType()))
+bins = bins.withColumn("bin6_max", F.substring("pi_trmax", 1, 6).cast(LongType()))
+bins = bins.withColumn("bin8_min", F.substring("pi_trmin", 1, 8).cast(LongType()))
+bins = bins.withColumn("bin8_max", F.substring("pi_trmax", 1, 8).cast(LongType()))
+bins = bins.withColumn("pays", F.upper(F.trim(F.col(COL_PAYS).cast("string"))))
+
+bins_prep = bins.select("bin6_min", "bin6_max", "bin8_min", "bin8_max", "pays")
+
+window_bin6 = Window.partitionBy("bin6_min", "bin6_max").orderBy("bin6_min")
+bins_prep = bins_prep.withColumn("rn6", row_number().over(window_bin6))
+bins_prep = bins_prep.filter(bins_prep.rn6 == 1).drop("rn6")
+
+window_bin8 = Window.partitionBy("bin8_min", "bin8_max").orderBy("bin8_min")
+bins_prep = bins_prep.withColumn("rn8", row_number().over(window_bin8))
+bins_prep = bins_prep.filter(bins_prep.rn8 == 1).drop("rn8")
+
+bins_prep = F.broadcast(bins_prep)  # petite table de reference, volume filtre restreint cote retrait
+
+# ------------------------------------------------------------------
+# JOINTURE BIN8 en priorite, repli BIN6
+# ------------------------------------------------------------------
+retrait = retrait.withColumn("bin_clean_num", F.col("bin_clean").cast(LongType()))
+
+result = retrait.join(
+    bins_prep,
+    (retrait["bin_type"] == 8) &
+    (retrait["bin_clean_num"] >= bins_prep["bin8_min"]) &
+    (retrait["bin_clean_num"] <= bins_prep["bin8_max"]),
+    "left"
+).select(retrait["*"], bins_prep["pays"].alias("pays_bin8"))
+
+result = result.join(
+    bins_prep,
+    (F.substring(result["bin_clean"], 1, 6).cast(LongType()) >= bins_prep["bin6_min"]) &
+    (F.substring(result["bin_clean"], 1, 6).cast(LongType()) <= bins_prep["bin6_max"]),
+    "left"
+).select(result["*"], bins_prep["pays"].alias("pays_bin6"))
+
+result = result.withColumn("pays", F.coalesce(F.col("pays_bin8"), F.col("pays_bin6")))
+result = result.withColumn(
+    "flag_etranger",
+    F.when(F.col("pays").isNull(), F.lit(None).cast("int"))
+     .when(F.col("pays") == "FRA", F.lit(0))
+     .otherwise(F.lit(1))
+)
+
+# ------------------------------------------------------------------
+# AGREGATION - meme forme que la requete monetique, pour comparaison directe
+# ------------------------------------------------------------------
+agg = result.groupBy("num_automate").agg(
+    F.sum(F.when((F.col("reseau") == "Visa") & (F.col("flag_etranger") == 1), 1).otherwise(0)).alias("nb_retraits_visa_etranger"),
+    F.sum(F.when((F.col("reseau") == "Mastercard") & (F.col("flag_etranger") == 1), 1).otherwise(0)).alias("nb_retraits_mastercard_etranger"),
+    F.sum(F.when((F.col("reseau") == "Visa") & (F.col("flag_etranger") == 0), 1).otherwise(0)).alias("nb_retraits_visa_francais"),
+    F.sum(F.when((F.col("reseau") == "Mastercard") & (F.col("flag_etranger") == 0), 1).otherwise(0)).alias("nb_retraits_mastercard_francais"),
+    F.sum(F.when(F.col("flag_etranger").isNull(), 1).otherwise(0)).alias("nb_pays_inconnu"),
+)
+
+# ------------------------------------------------------------------
+# ECRITURE
+# ------------------------------------------------------------------
+output_dataset = dataiku.Dataset("comparaison_visa_mastercard_bin")
+dkuspark.write_with_schema(output_dataset, agg)
