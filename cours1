@@ -1,21 +1,42 @@
-Bonjour,
+SELECT
+    num_automate,
+    date_operation,
+    heure_operation,
+    num_carte,
+    montant_euros,
+    type_reseau,
+    code_carte_privative,
 
-J'espère que tu vas bien.
+    CASE
+        WHEN est_postepargne = 1 THEN 'Postepargne'
+        WHEN est_porteur_lbp = 1 THEN 'Carte LBP (hors postepargne)'
+        ELSE 'Autre'
+    END AS type_carte,
 
-Je reviens vers toi sur la demande reçue aujourd'hui concernant les clients ayant retiré sur le GAB en 2026.
+    -- 0 = uniquement nos GAB, 1 = peut retirer dans les GAB d'autres banques
+    CASE
+        WHEN est_postepargne = 1 THEN 0
+        WHEN est_porteur_lbp = 1 THEN 1
+        ELSE NULL
+    END AS flag_retrait_autres_gab
 
-Le premier point est clair pour moi : te fournir la liste des clients ayant retiré sur le GAB en question en 2026, avec une carte postépargne.
+FROM (
+    SELECT
+        num_automate,
+        date_operation,
+        heure_operation,
+        num_carte,
+        CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
+        type_reseau,
+        code_carte_privative,
+        CASE WHEN code_carte_privative IN ('CPE', 'C24') THEN 1 ELSE 0 END AS est_postepargne,
+        CASE WHEN SUBSTR(num_carte, 1, 6) IN ('<BIN_1>', '<BIN_2>', '<BIN_3>', '<BIN_4>') THEN 1 ELSE 0 END AS est_porteur_lbp
+    FROM <TABLE_RETRAIT>
+    WHERE num_automate = '<NUM_GAB>'
+      AND SUBSTR(date_operation, 5, 4) = '2026'
+      AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
+) t
 
-Pour le deuxième point (ajouter un flag sur ceux qui ont une carte permettant de retirer dans des GAB autres que les nôtres, type CB LBP), j'ai un doute et je préfère vérifier avec toi.
-
-Ma compréhension : parmi ces clients qui retirent avec leur carte postépargne, tu veux savoir lesquels possèdent aussi une carte CB LBP, et pourraient donc retirer ailleurs, et lesquels dépendent uniquement de nos GAB.
-
-Si c'est bien ça, je dois te signaler une limite : dans notre table de retraits, le numéro de carte n'est pas complet (seuls les premiers chiffres sont disponibles) et il n'y a pas d'identifiant client. Je ne peux donc pas savoir si une carte postépargne et une carte CB appartiennent à la même personne. Il faudrait une autre source de données qui relie les clients à leurs cartes.
-
-Autre possibilité : est-ce que tu voulais plutôt la liste de tous les retraits faits par des clients LBP sur ce GAB en 2026, avec une carte postépargne ou une carte CB LBP, et un flag pour distinguer les deux ? Celle-ci, je peux la faire directement.
-
-Si ce n'est ni l'une ni l'autre, est-ce que tu pourrais me réexpliquer ta demande, avec un exemple si possible ?
-
-Merci d'avance,
-
-Bien cordialement,
+WHERE est_postepargne = 1 OR est_porteur_lbp = 1
+ORDER BY date_operation, heure_operation
+;
