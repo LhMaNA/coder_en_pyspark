@@ -1,42 +1,23 @@
-SELECT
-    num_automate,
-    date_operation,
-    heure_operation,
-    num_carte,
-    montant_euros,
-    type_reseau,
-    code_carte_privative,
+Subject: Retraits clients LBP sur le GAB en 2026 - résultat et une question
 
-    CASE
-        WHEN est_postepargne = 1 THEN 'Postepargne'
-        WHEN est_porteur_lbp = 1 THEN 'Carte LBP (hors postepargne)'
-        ELSE 'Autre'
-    END AS type_carte,
+Bonjour,
 
-    -- 0 = uniquement nos GAB, 1 = peut retirer dans les GAB d'autres banques
-    CASE
-        WHEN est_postepargne = 1 THEN 0
-        WHEN est_porteur_lbp = 1 THEN 1
-        ELSE NULL
-    END AS flag_retrait_autres_gab
+Comme convenu, tu trouveras ci-joint la liste de tous les retraits effectués en 2026 sur ce GAB par des clients LBP, avec une carte postépargne ou une carte CB LBP.
 
-FROM (
-    SELECT
-        num_automate,
-        date_operation,
-        heure_operation,
-        num_carte,
-        CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
-        type_reseau,
-        code_carte_privative,
-        CASE WHEN code_carte_privative IN ('CPE', 'C24') THEN 1 ELSE 0 END AS est_postepargne,
-        CASE WHEN SUBSTR(num_carte, 1, 6) IN ('<BIN_1>', '<BIN_2>', '<BIN_3>', '<BIN_4>') THEN 1 ELSE 0 END AS est_porteur_lbp
-    FROM <TABLE_RETRAIT>
-    WHERE num_automate = '<NUM_GAB>'
-      AND SUBSTR(date_operation, 5, 4) = '2026'
-      AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
-) t
+Pour les cartes CB LBP, j'ai retenu les cartes de nos porteurs LBP, identifiées à partir des BIN porteurs. Une colonne "type_carte" et un flag permettent de distinguer les deux cas :
+- Postépargne (flag = 0) : carte utilisable uniquement sur nos GAB
+- Carte LBP hors postépargne (flag = 1) : carte utilisable aussi dans les GAB des autres banques
 
-WHERE est_postepargne = 1 OR est_porteur_lbp = 1
-ORDER BY date_operation, heure_operation
-;
+J'ai une question sur un point que j'ai remarqué en préparant l'extraction.
+
+Dans le résultat, aucun retrait n'apparaît sur le réseau CB (code 00). Les retraits de nos porteurs remontent uniquement sur le réseau 03 (réseau interne) et sur le réseau 11 (COS).
+
+Mon interprétation : quand un porteur LBP retire sur un GAB LBP, la carte et le distributeur appartiennent tous les deux à la banque. Le retrait passerait donc par notre circuit interne, et non par le circuit interbancaire CB, qui ne serait utilisé que lorsque la carte et le GAB appartiennent à deux banques différentes.
+
+Est-ce que c'est logique pour toi, ou est-ce que normalement une partie de ces retraits devrait aussi passer par le réseau CB (00) ? J'aimerais bien avoir ton avis sur ce point.
+
+Si ce n'est pas le fonctionnement attendu, je peux faire une analyse complémentaire sur l'ensemble du réseau CB pour voir comment ces retraits remontent.
+
+Merci d'avance,
+
+Bien cordialement,
