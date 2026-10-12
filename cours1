@@ -88,3 +88,28 @@ ORDER BY mois, num_dab
     -- Selon le montant de compensation
     SUM(CASE WHEN CAST(<MONTANT_COMP> AS DOUBLE) > 0 THEN 1 ELSE 0 END) AS nb_compensees_montant,
     SUM(CASE WHEN <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0 THEN 1 ELSE 0 END) AS nb_non_compensees_montant
+
+
+
+
+SELECT
+    num_automate,
+    date_operation,
+    CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
+    code_carte_privative,
+
+    CASE
+        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Postepargne'
+        ELSE 'Autre carte LBP'
+    END AS carte_utilisee,
+
+    -- Deduit du type de carte, a confirmer avec le demandeur
+    CASE
+        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Compte epargne'
+        ELSE 'CCP'
+    END AS compte_debite_deduit
+
+FROM <TABLE_RETRAIT>
+WHERE type_reseau = '11'   -- retraits COS
+  AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
+;
