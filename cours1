@@ -76,3 +76,15 @@ WHERE type_ope = 'retrait'
 GROUP BY SUBSTR(date_transaction, 1, 6), num_dab
 ORDER BY mois, num_dab
 ;
+--------------------------------------------------------
+
+
+    SUM(CASE WHEN ref_aut IS NOT NULL AND TRIM(ref_aut) <> '' THEN 1 ELSE 0 END) AS nb_avec_ref_aut,
+
+    -- Selon la date de compensation
+    SUM(CASE WHEN date_comp IS NOT NULL AND TRIM(CAST(date_comp AS STRING)) <> '' THEN 1 ELSE 0 END) AS nb_compensees_date,
+    SUM(CASE WHEN date_comp IS NULL OR TRIM(CAST(date_comp AS STRING)) = '' THEN 1 ELSE 0 END) AS nb_non_compensees_date,
+
+    -- Selon le montant de compensation
+    SUM(CASE WHEN CAST(<MONTANT_COMP> AS DOUBLE) > 0 THEN 1 ELSE 0 END) AS nb_compensees_montant,
+    SUM(CASE WHEN <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0 THEN 1 ELSE 0 END) AS nb_non_compensees_montant
