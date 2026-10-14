@@ -1,115 +1,32 @@
+Subject: RE: Transfert de connaissances – règles de référence porteurs / non-porteurs
 
-SELECT
-    SUBSTR(date_transaction, 1, 6) AS mois,
-    COUNT(*) AS nb_autorisees,
-    SUM(CASE WHEN date_comp IS NULL OR TRIM(date_comp) = '' THEN 1 ELSE 0 END) AS nb_date_comp_vide,
-    SUM(CASE WHEN <MONTANT_COMP> IS NULL OR <MONTANT_COMP> = 0 THEN 1 ELSE 0 END) AS nb_montant_comp_vide
-FROM <TABLE_MONETIQUE>
-WHERE type_ope = 'retrait'
-  AND TRIM(ref_aut) <> ''
-  AND SUBSTR(date_transaction, 1, 6) >= '202504'
-GROUP BY SUBSTR(date_transaction, 1, 6)
-ORDER BY mois
-;
+Bonjour [Prénom],
 
+Avec plaisir, bien sûr.
 
+Comme convenu, je te transmets les règles de référence que nous appliquons pour distinguer les porteurs des non-porteurs. Que ce soit dans la table des retraits ou dans celle des dépôts, l'identification repose, comme tu l'as justement indiqué, sur le BIN extrait de la colonne numéro de carte.
 
+Tu trouveras en pièce jointe la règle de flag ainsi que la liste des BIN rattachés à nos porteurs. Tout BIN ne figurant pas dans cette liste est considéré comme non-porteur.
 
-èèèèèèèèèèèèèèèèèèèèèèèèèèèèè
+Je reste bien entendu à ta disposition pour toute question ou précision complémentaire.
 
+Je te remercie et te souhaite une bonne journée,
 
-SELECT
-    SUBSTR(date_transaction, 1, 6) AS mois,
-    num_dab,
-    COUNT(*) AS nb_autorisations,
-    SUM(CASE WHEN date_comp IS NULL OR TRIM(date_comp) = '' THEN 1 ELSE 0 END) AS nb_non_compensees,
-    ROUND(100 * SUM(CASE WHEN date_comp IS NULL OR TRIM(date_comp) = '' THEN 1 ELSE 0 END) / COUNT(*), 2) AS taux_non_compensees_pct
-FROM <TABLE_MONETIQUE>
-WHERE type_ope = 'retrait'
-  AND TRIM(ref_aut) <> ''
-  AND SUBSTR(date_transaction, 1, 6) BETWEEN '202504' AND '202609'
-GROUP BY SUBSTR(date_transaction, 1, 6), num_dab
-ORDER BY mois, num_dab
-;
-
-
-tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt
-
-
-SELECT
-    SUBSTR(date_transaction, 1, 6) AS mois,
-    num_dab,
-
-    COUNT(*) AS nb_autorisations,
-
-    -- Indicateur 1 : pas de date de compensation
-    SUM(CASE WHEN date_comp IS NULL OR TRIM(CAST(date_comp AS STRING)) = '' THEN 1 ELSE 0 END) AS nb_date_comp_vide,
-
-    -- Indicateur 2 : pas de montant compense
-    SUM(CASE WHEN <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0 THEN 1 ELSE 0 END) AS nb_montant_comp_vide,
-
-    -- Metrique demandee : non compensee si date OU montant de compensation absent
-    SUM(CASE
-            WHEN date_comp IS NULL OR TRIM(CAST(date_comp AS STRING)) = ''
-              OR <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0
-            THEN 1 ELSE 0
-        END) AS nb_non_compensees,
-
-    ROUND(100 * SUM(CASE
-            WHEN date_comp IS NULL OR TRIM(CAST(date_comp AS STRING)) = ''
-              OR <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0
-            THEN 1 ELSE 0
-        END) / COUNT(*), 2) AS taux_non_compensees_pct,
-
-    -- Bonus : compensees, mais pour un montant inferieur au montant autorise
-    SUM(CASE
-            WHEN CAST(<MONTANT_COMP> AS DOUBLE) > 0
-             AND CAST(<MONTANT_COMP> AS DOUBLE) < CAST(<MONTANT_TRANSACTION> AS DOUBLE)
-            THEN 1 ELSE 0
-        END) AS nb_compensations_partielles
-
-FROM <TABLE_MONETIQUE>
-WHERE type_ope = 'retrait'
-  AND ref_aut IS NOT NULL
-  AND TRIM(ref_aut) <> ''
-  AND SUBSTR(date_transaction, 1, 6) BETWEEN '202504' AND '202609'
-GROUP BY SUBSTR(date_transaction, 1, 6), num_dab
-ORDER BY mois, num_dab
-;
---------------------------------------------------------
-
-
-    SUM(CASE WHEN ref_aut IS NOT NULL AND TRIM(ref_aut) <> '' THEN 1 ELSE 0 END) AS nb_avec_ref_aut,
-
-    -- Selon la date de compensation
-    SUM(CASE WHEN date_comp IS NOT NULL AND TRIM(CAST(date_comp AS STRING)) <> '' THEN 1 ELSE 0 END) AS nb_compensees_date,
-    SUM(CASE WHEN date_comp IS NULL OR TRIM(CAST(date_comp AS STRING)) = '' THEN 1 ELSE 0 END) AS nb_non_compensees_date,
-
-    -- Selon le montant de compensation
-    SUM(CASE WHEN CAST(<MONTANT_COMP> AS DOUBLE) > 0 THEN 1 ELSE 0 END) AS nb_compensees_montant,
-    SUM(CASE WHEN <MONTANT_COMP> IS NULL OR CAST(<MONTANT_COMP> AS DOUBLE) = 0 THEN 1 ELSE 0 END) AS nb_non_compensees_montant
+Marya
 
 
 
+Règle d’identification des porteurs LBP – Référentiel BIN
 
-SELECT
-    num_automate,
-    date_operation,
-    CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
-    code_carte_privative,
+Phrase d’introduction (ligne 2)
+À l’aide de ce référentiel, nous identifions les porteurs LBP dans les tables de retraits et de dépôts : le BIN (6 premiers chiffres du numéro de carte) est comparé à la liste ci-dessous. Tout BIN présent dans la liste est flagué « Porteur » ; tout autre BIN est flagué « Non porteur ».
 
-    CASE
-        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Postepargne'
-        ELSE 'Autre carte LBP'
-    END AS carte_utilisee,
+Tableau (à partir de la ligne 4)
 
-    -- Deduit du type de carte, a confirmer avec le demandeur
-    CASE
-        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Compte epargne'
-        ELSE 'CCP'
-    END AS compte_debite_deduit
+BIN	Flag
+123456	Porteur
+234567	Porteur
+… (un BIN par ligne)	Porteur
+Tout autre BIN	Non porteur
 
-FROM <TABLE_RETRAIT>
-WHERE type_reseau = '11'   -- retraits COS
-  AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
-;
+
