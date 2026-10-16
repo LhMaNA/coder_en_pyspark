@@ -1,5 +1,11 @@
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.getOrCreate()
-print("Spark", spark.version)
-df = spark.table("table")
+import dataiku
+import dataiku.spark as dkuspark
+from pyspark import SparkContext
+from pyspark.sql import SQLContext
+
+sc = SparkContext.getOrCreate()
+sqlContext = SQLContext(sc)
+df = dkuspark.get_dataframe(sqlContext, dataiku.Dataset("NOM_DU_DATASET_DANS_LE_FLOW"))
+df.printSchema()
+df.show(5, False)
 print("Lignes :", df.count())
