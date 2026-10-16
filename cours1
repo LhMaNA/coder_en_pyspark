@@ -1,11 +1,18 @@
-import dataiku
-import dataiku.spark as dkuspark
-from pyspark import SparkContext
-from pyspark.sql import SQLContext
-
-sc = SparkContext.getOrCreate()
-sqlContext = SQLContext(sc)
-df = dkuspark.get_dataframe(sqlContext, dataiku.Dataset("NOM_DU_DATASET_DANS_LE_FLOW"))
-df.printSchema()
-df.show(5, False)
-print("Lignes :", df.count())
+SELECT
+    annee,
+    COUNT(*)                                   AS nb_lignes_gab_jour,
+    COUNT(DISTINCT num_automate)               AS nb_gab,
+    COUNT(DISTINCT CONCAT(mois, '-', jours))   AS nb_jours,
+    SUM(ret_nb)                                AS total_retraits,
+    SUM(ret_nb_cos)                            AS total_retraits_cos,
+    SUM(ret_nb_horscos)                        AS total_retraits_horscos,
+    ROUND(SUM(ret_montant_total), 0)           AS montant_total,
+    ROUND(SUM(ret_montant_total) / SUM(ret_nb), 2) AS montant_moyen_par_retrait,
+    SUM(cap_nb)                                AS total_captures_hors_cos,
+    SUM(cap_cos_nb)                            AS total_captures_cos,
+    SUM(ret_nb_nuit)                           AS total_retraits_nuit,
+    SUM(nb_ope_reseau_jcb + nb_ope_reseau_carte_cup) AS total_jcb_cup,
+    ROUND(AVG(ret_nb), 1)                      AS retraits_moyens_par_gab_jour
+FROM table 
+GROUP BY annee
+ORDER BY annee;
