@@ -1,98 +1,360 @@
-# Diagnostic de l'environnement : quels modèles peut-on utiliser pour le projet GAB ?
-import sys, platform, os, importlib
+# -*- coding: utf-8 -*-
+"""Diagnostic COMPLET de l'environnement de travail Dataiku (pas seulement un dataset).
 
-print("Python      :", sys.version.split()[0], "|", platform.platform())
+À coller dans une cellule d'un notebook Dataiku, avec le code env habituel du projet.
+Compatible Python 3.6. Ne modifie rien et n'installe rien.
 
-# 1. Versions des librairies utiles
-LIBS = [
-    ("numpy", "calcul"), ("pandas", "données"), ("scipy", "statistiques"),
-    ("sklearn", "modèles classiques"), ("openpyxl", "export Excel"),
-    ("statsmodels", "séries temporelles (STL, saisonnalité)"),
-    ("pyod", "boîte à outils dédiée aux anomalies"),
-    ("hdbscan", "clustering par densité (sans eps)"),
-    ("umap", "projection 2D non linéaire"),
-    ("prophet", "prévision avec saisonnalité"),
-    ("ruptures", "détection de ruptures dans une série"),
-    ("xgboost", "boosting (si un jour on a des étiquettes)"),
-    ("lightgbm", "boosting (si un jour on a des étiquettes)"),
-    ("psutil", "mesure de la mémoire"),
-]
-print("\n=== LIBRAIRIES ===")
-for nom, role in LIBS:
+Sections :
+  A. Machine        : processeur, quota CPU du conteneur, mémoire, swap, disques, GPU
+  B. Tests mesurés  : mémoire réellement allouable, vitesse de calcul (numpy, pandas, scikit-learn)
+  C. Python         : version, code env, toutes les librairies installées, droits d'installation
+  D. Réseau         : accès Internet / PyPI / proxy
+  E. Dataiku        : version, utilisateur et droits, projets, code envs, connexions, moteurs
+                      (Hive, Impala, Spark, SQL), datasets, dossiers, scénarios du projet
+  F. Synthèse       : les limites à retenir, en clair
+"""
+import os
+import sys
+import time
+import shutil
+import socket
+import platform
+import importlib
+
+# ------------------------------------------------------------------ PARAMÈTRES
+TEST_MEMOIRE = True          # alloue de la mémoire par paliers pour mesurer ce qui passe vraiment
+PART_MAX_TEST_MEMOIRE = 0.6  # ... sans dépasser 60 % de la mémoire jugée disponible (sécurité)
+PLAFOND_TEST_MEMOIRE_GO = 16 # ... ni 16 Go
+TEST_VITESSE = True          # petits bancs d'essai (quelques secondes)
+TESTER_MOTEURS_SQL = True    # essaie une requête « SELECT 1 » sur les moteurs disponibles
+SYNTHESE = []                # (sujet, constat) affichés à la fin
+
+
+def titre(t):
+    print("\n" + "=" * 92 + "\n" + t + "\n" + "=" * 92)
+
+
+def go(o):
+    return "?" if o is None else "{:.2f} Go".format(o / 1e9)
+
+
+def lire(chemin):
+    try:
+        with open(chemin) as f:
+            return f.read().strip()
+    except Exception:
+        return None
+
+
+def note(sujet, constat):
+    SYNTHESE.append((sujet, constat))
+
+
+# ====================================================================== A. MACHINE
+titre("A. LA MACHINE")
+print("Système    :", platform.platform())
+print("Python     :", sys.version.split()[0], "|", sys.executable)
+cpuinfo = lire("/proc/cpuinfo") or ""
+modele = [l.split(":", 1)[1].strip() for l in cpuinfo.splitlines() if l.startswith("model name")]
+print("Processeur :", modele[0] if modele else "?")
+coeurs_machine = os.cpu_count()
+try:
+    coeurs_autorises = len(os.sched_getaffinity(0))
+except Exception:
+    coeurs_autorises = coeurs_machine
+quota = None
+q, p = lire("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"), lire("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+if q and p and int(q) > 0:
+    quota = int(q) / int(p)
+else:
+    v2 = lire("/sys/fs/cgroup/cpu.max")
+    if v2 and not v2.startswith("max"):
+        a, b = v2.split()
+        quota = int(a) / int(b)
+print("Coeurs     : {} sur la machine, {} autorisés pour ce processus, quota conteneur : {}".format(
+    coeurs_machine, coeurs_autorises, "{:.1f} coeurs".format(quota) if quota else "aucun"))
+coeurs_utiles = min(x for x in [coeurs_machine, coeurs_autorises, quota or 1e9] if x)
+note("Processeur", "{:.0f} coeur(s) réellement utilisables (n_jobs={:.0f} au maximum)".format(coeurs_utiles, max(1, int(coeurs_utiles))))
+
+mem = {}
+for l in (lire("/proc/meminfo") or "").splitlines():
+    k, v = l.split(":", 1)
+    mem[k] = int(v.strip().split()[0]) * 1024
+lim, usage = None, None
+for a, b in [("/sys/fs/cgroup/memory/memory.limit_in_bytes", "/sys/fs/cgroup/memory/memory.usage_in_bytes"),
+             ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.current")]:
+    la, ub = lire(a), lire(b)
+    if la is not None:
+        lim = None if la in ("max", "") or int(la) > 1e15 else int(la)
+        usage = int(ub) if ub else None
+        break
+rss = None
+for l in (lire("/proc/self/status") or "").splitlines():
+    if l.startswith("VmRSS"):
+        rss = int(l.split()[1]) * 1024
+print("Mémoire machine   : {} au total, {} disponibles, swap {}".format(
+    go(mem.get("MemTotal")), go(mem.get("MemAvailable")), go(mem.get("SwapTotal"))))
+print("Limite conteneur  : {}{}".format(go(lim) if lim else "aucune détectée",
+                                         " (utilisés : {})".format(go(usage)) if lim else ""))
+print("Ce kernel utilise : {}".format(go(rss)))
+mem_utilisable = mem.get("MemAvailable")
+if lim and usage is not None:
+    mem_utilisable = min(mem_utilisable or lim, lim - usage)
+print(">> Mémoire utilisable estimée : {}".format(go(mem_utilisable)))
+note("Mémoire (estimée)", "{} utilisables par ce notebook{}".format(
+    go(mem_utilisable), " ; limite du conteneur {}".format(go(lim)) if lim else ""))
+
+for chemin in [os.getcwd(), "/tmp", os.path.expanduser("~"), os.environ.get("DIP_HOME", "")]:
+    if chemin and os.path.isdir(chemin):
+        try:
+            du = shutil.disk_usage(chemin)
+            print("Disque {:<45}: {} libres / {}".format(chemin[:45], go(du.free), go(du.total)))
+        except Exception:
+            pass
+gpu = shutil.which("nvidia-smi")
+print("GPU        :", "nvidia-smi présent" if gpu else "aucun GPU détecté")
+note("GPU", "présent" if gpu else "absent (pas de deep learning accéléré)")
+
+# ====================================================================== B. TESTS MESURÉS
+titre("B. TESTS MESURÉS (mémoire réellement allouable, vitesse)")
+import numpy as np
+if TEST_MEMOIRE and mem_utilisable:
+    cible = min(mem_utilisable * PART_MAX_TEST_MEMOIRE, PLAFOND_TEST_MEMOIRE_GO * 1e9)
+    blocs, alloue, palier = [], 0, 256 * 1024 * 1024
+    t0 = time.time()
+    try:
+        while alloue + palier <= cible:
+            blocs.append(np.ones(palier // 8, dtype=np.float64))
+            alloue += palier
+        print("Allocation réussie : {} (cible de sécurité {}), en {:.1f} s".format(go(alloue), go(cible), time.time() - t0))
+        note("Mémoire (mesurée)", "au moins {} allouables sans erreur".format(go(alloue)))
+    except MemoryError:
+        print("Erreur mémoire après {} alloués".format(go(alloue)))
+        note("Mémoire (mesurée)", "erreur mémoire à partir de {}".format(go(alloue)))
+    finally:
+        del blocs
+    octets_par_valeur = 8
+    for nb_col in (10, 30, 90):
+        lignes = alloue / (nb_col * octets_par_valeur * 3)   # marge x3 pour les calculs pandas
+        print("  -> tableau de {:>2} colonnes numériques : ~{:,.0f} lignes manipulables confortablement".format(
+            nb_col, lignes).replace(",", " "))
+    note("Taille de tableau", "~{:,.0f} lignes x 30 colonnes numériques (marge x3)".format(
+        alloue / (30 * 8 * 3)).replace(",", " "))
+else:
+    print("Test mémoire désactivé.")
+
+if TEST_VITESSE:
+    try:
+        import pandas as pd
+        n = 2000000
+        t0 = time.time()
+        a = np.random.rand(2000, 2000)
+        a.dot(a)
+        t_numpy = time.time() - t0
+        df_test = pd.DataFrame({"gab": np.random.randint(0, 6000, n), "jour": np.random.randint(0, 365, n),
+                                "x": np.random.rand(n)})
+        t0 = time.time()
+        df_test.groupby(["gab", "jour"])["x"].median()
+        t_pandas = time.time() - t0
+        t0 = time.time()
+        df_test.sort_values(["gab", "jour"])
+        t_tri = time.time() - t0
+        print("numpy  : produit de matrices 2000x2000 en {:.2f} s".format(t_numpy))
+        print("pandas : médiane groupée sur 2 M lignes en {:.2f} s ; tri en {:.2f} s".format(t_pandas, t_tri))
+        note("Vitesse pandas", "médiane groupée sur 2 M lignes : {:.1f} s".format(t_pandas))
+        del df_test
+        from sklearn.ensemble import IsolationForest
+        from sklearn.cluster import KMeans
+        X = np.random.rand(100000, 12)
+        t0 = time.time()
+        try:
+            IsolationForest(n_estimators=200, contamination="auto", behaviour="new", n_jobs=-1).fit(X)
+        except TypeError:
+            IsolationForest(n_estimators=200, contamination="auto", n_jobs=-1).fit(X)
+        t_if = time.time() - t0
+        t0 = time.time()
+        KMeans(n_clusters=6, n_init=5).fit(X)
+        t_km = time.time() - t0
+        print("scikit-learn : IsolationForest 100 000 x 12 en {:.1f} s ; KMeans en {:.1f} s".format(t_if, t_km))
+        note("Vitesse scikit-learn", "IsolationForest 100 000 lignes : {:.1f} s".format(t_if))
+    except Exception as e:
+        print("Bancs d'essai interrompus :", e)
+
+# ====================================================================== C. PYTHON
+titre("C. PYTHON : code env, librairies, droits d'installation")
+print("Code env :", os.environ.get("DKU_CODE_ENV_NAME", "?"), "| dossier :", sys.prefix)
+try:
+    import pkg_resources
+    paquets = sorted((d.project_name, d.version) for d in pkg_resources.working_set)
+    print("{} librairies installées :".format(len(paquets)))
+    ligne = ""
+    for nom, version in paquets:
+        morceau = "{}=={}  ".format(nom, version)
+        if len(ligne) + len(morceau) > 110:
+            print("  " + ligne)
+            ligne = ""
+        ligne += morceau
+    if ligne:
+        print("  " + ligne)
+    note("Librairies", "{} installées (liste complète ci-dessus)".format(len(paquets)))
+except Exception as e:
+    print("Liste des librairies impossible :", e)
+cles = ["numpy", "pandas", "scipy", "sklearn", "statsmodels", "xgboost", "lightgbm", "catboost", "pyarrow",
+        "matplotlib", "seaborn", "plotly", "openpyxl", "pyod", "hdbscan", "umap", "prophet", "ruptures", "tslearn",
+        "shap", "tensorflow", "torch", "pyspark", "psutil", "dask", "polars"]
+absentes = []
+for nom in cles:
     try:
         m = importlib.import_module(nom)
-        print("  OK      {:<12} {:<10} {}".format(nom, getattr(m, "__version__", "?"), role))
+        print("  OK      {:<12} {}".format(nom, getattr(m, "__version__", "?")))
     except Exception:
-        print("  ABSENT  {:<12} {:<10} {}".format(nom, "-", role))
+        absentes.append(nom)
+print("  ABSENTES :", ", ".join(absentes))
+note("Librairies absentes", ", ".join(absentes) if absentes else "aucune de la liste")
+site = [p for p in sys.path if p.endswith("site-packages")]
+ecriture = any(os.access(p, os.W_OK) for p in site)
+print("Dossier des librairies modifiable par toi :", "oui" if ecriture else "non")
+note("Installer des librairies", "possible soi-même (pip)" if ecriture
+     else "impossible soi-même : demander à l'admin un code env (Administration > Code Envs)")
 
-# 2. Modèles candidats pour l'objectif du projet
-CANDIDATS = [
-    # (étape, module, classe, à quoi ça servirait)
-    ("Familles",  "sklearn.cluster", "KMeans", "référence actuelle"),
-    ("Familles",  "sklearn.cluster", "MiniBatchKMeans", "K-Means rapide, peu de mémoire"),
-    ("Familles",  "sklearn.mixture", "GaussianMixture", "familles de formes/tailles différentes"),
-    ("Familles",  "sklearn.mixture", "BayesianGaussianMixture", "choisit seul le nombre de familles"),
-    ("Familles",  "sklearn.cluster", "AgglomerativeClustering", "hiérarchie de familles (dendrogramme)"),
-    ("Familles",  "sklearn.cluster", "Birch", "clustering en une passe, gros volumes"),
-    ("Familles",  "sklearn.cluster", "OPTICS", "familles + isolés, sans régler eps"),
-    ("Familles",  "sklearn.cluster", "DBSCAN", "groupes denses + bruit"),
-    ("Familles",  "sklearn.cluster", "HDBSCAN", "comme OPTICS, plus simple (sklearn >= 1.3)"),
-    ("Détection", "sklearn.ensemble", "IsolationForest", "isole les jours rares"),
-    ("Détection", "sklearn.neighbors", "LocalOutlierFactor", "anormal par rapport à ses voisins"),
-    ("Détection", "sklearn.covariance", "EllipticEnvelope", "distance robuste (Mahalanobis)"),
-    ("Détection", "sklearn.covariance", "MinCovDet", "moyenne/covariance robustes"),
-    ("Détection", "sklearn.svm", "OneClassSVM", "frontière du normal (lent)"),
-    ("Détection", "sklearn.linear_model", "SGDOneClassSVM", "One-Class SVM rapide (sklearn >= 1.0)"),
-    ("Réduction", "sklearn.decomposition", "PCA", "erreur de reconstruction = score"),
-    ("Réduction", "sklearn.decomposition", "IncrementalPCA", "PCA par morceaux, peu de mémoire"),
-    ("Réduction", "sklearn.manifold", "TSNE", "visualiser les profils de GAB"),
-    ("Saison",    "statsmodels.tsa.seasonal", "STL", "tendance + saison + résidu par GAB"),
-    ("Anomalies", "pyod.models.ecod", "ECOD", "détecteur rapide sans paramètre"),
-    ("Anomalies", "pyod.models.copod", "COPOD", "détecteur rapide sans paramètre"),
-    ("Anomalies", "pyod.models.hbos", "HBOS", "détecteur par histogrammes, très rapide"),
-]
-print("\n=== MODÈLES CANDIDATS ===")
-for etape, module, classe, usage in CANDIDATS:
+# ====================================================================== D. RÉSEAU
+titre("D. RÉSEAU")
+for nom, hote in [("Internet (pypi.org)", "pypi.org"), ("Google", "www.google.com"), ("GitHub", "github.com")]:
     try:
-        getattr(importlib.import_module(module), classe)
-        statut = "OK    "
+        socket.create_connection((hote, 443), timeout=3).close()
+        print("  {:<22}: accessible".format(nom))
+        acces = "accessible"
     except Exception:
-        statut = "ABSENT"
-    print("  {}  {:<10} {:<26} {}".format(statut, etape, classe, usage))
+        print("  {:<22}: bloqué".format(nom))
+        acces = "bloqué"
+    if nom.startswith("Internet"):
+        note("Internet", acces)
+proxies = {k: v for k, v in os.environ.items() if "proxy" in k.lower()}
+print("  Proxy :", proxies if proxies else "aucun configuré")
 
-# 3. Liste complète des modèles scikit-learn installés (cluster, anomalies, réduction)
-print("\n=== TOUS LES ESTIMATEURS SCIKIT-LEARN UTILES ===")
-try:
-    from sklearn.utils import all_estimators            # sklearn >= 0.22
-except ImportError:
-    from sklearn.utils.testing import all_estimators    # sklearn 0.21
-MODULES = ("sklearn.cluster", "sklearn.mixture", "sklearn.ensemble._iforest",
-           "sklearn.ensemble.iforest", "sklearn.neighbors", "sklearn.covariance",
-           "sklearn.svm", "sklearn.decomposition", "sklearn.manifold")
-for nom, cls in sorted(all_estimators(), key=lambda x: (x[1].__module__, x[0])):
-    if cls.__module__.startswith(MODULES):
-        print("  {:<40} {}".format(cls.__module__, nom))
-
-# 4. Ressources de la machine (le kernel meurt-il par manque de mémoire ?)
-print("\n=== RESSOURCES ===")
-print("  Coeurs CPU :", os.cpu_count())
-try:
-    import psutil
-    mem = psutil.virtual_memory()
-    print("  Mémoire    : {:.1f} Go au total, {:.1f} Go libres".format(mem.total / 1e9, mem.available / 1e9))
-except ImportError:
-    try:
-        with open("/proc/meminfo") as f:
-            infos = dict(l.split(":") for l in f.read().splitlines()[:3])
-        print("  Mémoire    :", {k: v.strip() for k, v in infos.items()})
-    except Exception:
-        print("  Mémoire    : non mesurable ici")
-
-# 5. Dataiku
+# ====================================================================== E. DATAIKU
+titre("E. DATAIKU")
 try:
     import dataiku
-    print("\n=== DATAIKU ===")
-    print("  Module dataiku importé. Code env :", os.environ.get("DKU_CODE_ENV_NAME", "?"))
-except ImportError:
-    print("\nModule dataiku absent (exécution hors Dataiku)")
+    client = dataiku.api_client()
+    cle = dataiku.default_project_key()
+    projet = client.get_project(cle)
+    try:
+        infos = client.get_instance_info()
+        brut = getattr(infos, "raw", {}) or {}
+        print("Version DSS :", brut.get("dssVersion", "?"))
+    except Exception:
+        pass
+    try:
+        auth = client.get_auth_info()
+        print("Utilisateur :", auth.get("authIdentifier"), "| groupes :", auth.get("groups"))
+        admin = "administrators" in [g.lower() for g in auth.get("groups", [])]
+        note("Droits Dataiku", "administrateur" if admin else "utilisateur (pas admin)")
+    except Exception as e:
+        print("Utilisateur : inconnu (", e, ")")
+    try:
+        print("Projets accessibles :", len(client.list_project_keys()))
+    except Exception:
+        pass
+    try:
+        envs = client.list_code_envs()
+        print("Code envs visibles :")
+        for e_ in envs:
+            print("  {:<35} {:<8} {}".format(e_.get("envName"), e_.get("envLang"), e_.get("pythonInterpreter", "")))
+        note("Code envs", ", ".join("{} ({})".format(e_.get("envName"), e_.get("pythonInterpreter", "?")) for e_ in envs
+                                    if e_.get("envLang") == "PYTHON"))
+    except Exception as e:
+        print("Code envs : liste non accessible (droits) :", str(e)[:120])
+    types_connexion = {}
+    try:
+        connexions = client.list_connections()
+        for nom, c in connexions.items():
+            types_connexion.setdefault(c.get("type", "?"), []).append(nom)
+        print("Connexions par type :")
+        for t, noms in sorted(types_connexion.items()):
+            print("  {:<14} {}".format(t, ", ".join(noms[:8]) + (" ..." if len(noms) > 8 else "")))
+        note("Connexions", ", ".join("{} ({})".format(t, len(n)) for t, n in sorted(types_connexion.items())))
+    except Exception as e:
+        print("Connexions : liste non accessible (droits admin requis) :", str(e)[:120])
 
+    # Datasets du projet
+    datasets_hive, datasets_sql = [], []
+    try:
+        lst = projet.list_datasets()
+        print("\nDatasets du projet {} : {}".format(cle, len(lst)))
+        for d in lst:
+            nom = d.get("name")
+            typ = d.get("type")
+            cnx = d.get("params", {}).get("connection")
+            nb = "?"
+            try:
+                nb = projet.get_dataset(nom).get_last_metric_values().get_global_value("records:COUNT_RECORDS")
+            except Exception:
+                pass
+            print("  {:<40} {:<12} {:<22} lignes : {}".format(nom[:40], typ, str(cnx)[:22], nb))
+            if typ in ("HDFS", "Hive"):
+                datasets_hive.append(nom)
+            if typ in ("PostgreSQL", "Oracle", "SQLServer", "Snowflake", "Teradata", "Vertica", "Greenplum", "MySQL",
+                       "Redshift", "BigQuery", "Synapse", "Impala"):
+                datasets_sql.append(nom)
+    except Exception as e:
+        print("Datasets : non accessibles :", e)
+    try:
+        dossiers = projet.list_managed_folders()
+        print("Dossiers gérés :", [f.get("name") for f in dossiers] or "aucun")
+    except Exception:
+        pass
+    try:
+        scen = projet.list_scenarios()
+        print("Scénarios (automatisation) :", [s_.get("name") for s_ in scen] or "aucun")
+        note("Scénarios", "{} dans le projet (planification quotidienne possible si droits)".format(len(scen)))
+    except Exception:
+        pass
+
+    # Moteurs de calcul
+    print("\nMoteurs de calcul :")
+    try:
+        import pyspark
+        print("  Spark  : pyspark {} importable".format(pyspark.__version__))
+        note("Spark", "pyspark disponible")
+    except Exception:
+        print("  Spark  : non disponible dans ce code env")
+        note("Spark", "non disponible dans ce code env")
+    if TESTER_MOTEURS_SQL:
+        from dataiku.core import sql as dku_sql
+        for moteur, liste in [("HiveExecutor", datasets_hive), ("ImpalaExecutor", datasets_hive)]:
+            Exec = getattr(dku_sql, moteur, None)
+            if Exec is None or not liste:
+                print("  {:<14}: {}".format(moteur, "absent" if Exec is None else "aucun dataset HDFS/Hive pour tester"))
+                continue
+            try:
+                t0 = time.time()
+                Exec(dataset=dataiku.Dataset(liste[0])).query_to_df("SELECT 1")
+                print("  {:<14}: OK depuis le notebook ({:.0f} s)".format(moteur, time.time() - t0))
+                note(moteur, "utilisable depuis le notebook")
+            except Exception as e:
+                print("  {:<14}: refusé ({})".format(moteur, str(e)[:120]))
+                note(moteur, "non utilisable depuis le notebook (passer par une recette)")
+        SQLExec = getattr(dku_sql, "SQLExecutor2", None)
+        if SQLExec and datasets_sql:
+            try:
+                SQLExec(dataset=dataiku.Dataset(datasets_sql[0])).query_to_df("SELECT 1")
+                print("  SQLExecutor2  : OK")
+                note("SQL", "utilisable depuis le notebook")
+            except Exception as e:
+                print("  SQLExecutor2  : refusé ({})".format(str(e)[:120]))
+        else:
+            print("  SQLExecutor2  : aucun dataset SQL dans le projet pour tester")
+except ImportError:
+    print("Module dataiku absent : lancer ce script dans un notebook Dataiku.")
+
+# ====================================================================== F. SYNTHÈSE
+titre("F. SYNTHÈSE : LES LIMITES DE L'ENVIRONNEMENT (à me renvoyer)")
+for sujet, constat in SYNTHESE:
+    print("  {:<26}: {}".format(sujet, constat))
+print("""
+Rappels utiles :
+  - Un lien Excel en base64 dans le notebook devient lent au-delà de quelques dizaines de Mo :
+    au-delà, déposer le fichier dans un dossier géré Dataiku.
+  - Ce qui ne tient pas en mémoire doit être lu par morceaux, ou calculé en Hive / Impala / Spark.
+""")
