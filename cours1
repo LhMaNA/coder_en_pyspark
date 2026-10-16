@@ -1,5 +1,1 @@
-from pyspark.sql import SparkSession
-spark = SparkSession.builder.getOrCreate()
-print("Spark", spark.version)
-df = spark.table("dss_fallback_lbp_dp.reporting_t_dlk_mon_nf2_ope_retrait_v1")
-print("Lignes :", df.count())
+
