@@ -1,1 +1,27 @@
+SELECT
+    num_automate,
+    date_operation,
+    heure_operation,
+    num_carte,
+    CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
+    type_reseau,
+    code_carte_privative,
 
+    CASE
+        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Carte postepargne'
+        WHEN code_carte_privative = 'COS'           THEN 'Carte COS'
+        ELSE 'Autre carte'
+    END AS type_carte,
+
+    -- Deduit uniquement quand c'est certain ; sinon non determine
+    CASE
+        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Compte epargne'
+        ELSE 'Non determine'
+    END AS compte_debite_deduit
+
+FROM <TABLE_RETRAIT>
+WHERE (type_reseau = '11' OR code_carte_privative = 'COS')        -- retraits COS
+  AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
+  AND SUBSTR(date_operation, 5, 4) = '2026'
+  AND SUBSTR(date_operation, 3, 2) BETWEEN '01' AND '06'          -- 1er semestre
+;
