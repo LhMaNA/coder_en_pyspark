@@ -1,27 +1,39 @@
 SELECT
-    num_automate,
-    date_operation,
-    heure_operation,
-    num_carte,
-    CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
-    type_reseau,
-    code_carte_privative,
-
     CASE
         WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Carte postepargne'
         WHEN code_carte_privative = 'COS'           THEN 'Carte COS'
         ELSE 'Autre carte'
     END AS type_carte,
-
-    -- Deduit uniquement quand c'est certain ; sinon non determine
-    CASE
-        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Compte epargne'
-        ELSE 'Non determine'
-    END AS compte_debite_deduit
-
+    COUNT(*) AS nb_retraits,
+    ROUND(SUM(CAST(montant_ope AS DOUBLE) / 100), 0) AS montant_total_euros,
+    ROUND(AVG(CAST(montant_ope AS DOUBLE) / 100), 1) AS montant_moyen_euros
 FROM <TABLE_RETRAIT>
-WHERE (type_reseau = '11' OR code_carte_privative = 'COS')        -- retraits COS
+WHERE (type_reseau = '11' OR code_carte_privative = 'COS')
   AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
   AND SUBSTR(date_operation, 5, 4) = '2026'
-  AND SUBSTR(date_operation, 3, 2) BETWEEN '01' AND '06'          -- 1er semestre
+  AND SUBSTR(date_operation, 3, 2) BETWEEN '01' AND '06'
+GROUP BY
+    CASE
+        WHEN code_carte_privative IN ('CPE', 'C24') THEN 'Carte postepargne'
+        WHEN code_carte_privative = 'COS'           THEN 'Carte COS'
+        ELSE 'Autre carte'
+    END
 ;
+
+
+Subject: RE : Analyse du trafic COS - point d'avancement
+
+Bonjour Olivier,
+
+Merci pour ta relance, et vraiment désolée pour le délai.
+
+Pour les retraits COS, il est très difficile de remonter jusqu'au client : la table des retraits ne contient pas d'identifiant client, et le numéro de carte y est chiffré.
+
+Tu trouveras ci-joint ce que j'ai pu extraire pour le moment sur les retraits COS du premier semestre 2026 : le GAB, la date, le montant de chaque retrait, le type de carte utilisée, et le type de compte débité lorsqu'il peut être déduit (compte d'épargne pour une carte postépargne). Je sais que ça ne répond pas encore à ta demande, c'est pour ça que je ne te l'avais pas envoyé plus tôt.
+
+Pour récupérer les informations sur le client (PPH ou PMO, âge, équipement, banque principale), le lien devrait pouvoir se faire via la table Keops. Une demande a été lancée à ce sujet, mais nous n'avons pas encore de retour à ce jour.
+
+Le sujet est donc toujours en cours. Je ne te dis pas que ce n'est pas faisable, mais le traitement s'annonce complexe. Je reviens vers toi dès que nous avons du nouveau, avec l'aide de Laurent Astru, qui m'a beaucoup orientée sur ta demande.
+
+Bien cordialement,
+Lyna Maria
