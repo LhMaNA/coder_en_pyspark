@@ -1,1 +1,5 @@
-
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+print("Spark", spark.version)
+df = spark.table("table")
+print("Lignes :", df.count())
