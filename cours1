@@ -1,17 +1,1 @@
-SELECT
-    COUNT(*)                                                                         AS nb_lignes,
-    SUM(CASE WHEN ret_nb <> ret_nb_cos + ret_nb_horscos THEN 1 ELSE 0 END)           AS ko_cos_plus_horscos,
-    SUM(CASE WHEN ret_nb_jours_actifs > 1 THEN 1 ELSE 0 END)                         AS ko_jours_actifs,
-    SUM(CASE WHEN ret_montant_min > ret_montant_moyen + 0.01
-              OR ret_montant_moyen > ret_montant_max + 0.01 THEN 1 ELSE 0 END)       AS ko_min_moyen_max,
-    SUM(CASE WHEN ret_nb_nuit > ret_nb OR ret_nb_weekend > ret_nb THEN 1 ELSE 0 END) AS ko_nuit_weekend,
-    SUM(CASE WHEN ret_pct_nuit < 0 OR ret_pct_nuit > 100 THEN 1 ELSE 0 END)          AS ko_pourcentage,
-    SUM(CASE WHEN ret_nb = 0 THEN 1 ELSE 0 END)                                      AS lignes_sans_retrait,
-    -- Tous les réseaux additionnés = toutes les opérations (retraits + captures)
-    SUM(CASE WHEN (nb_ope_reseau_franfinance + nb_ope_reseau_cb + nb_ope_reseau_trionis + nb_ope_reseau_ppl
-                 + nb_ope_reseau_mastercard + nb_ope_reseau_cofinoga + nb_ope_reseau_interne + nb_ope_reseau_casino
-                 + nb_ope_reseau_accord + nb_ope_reseau_amex + nb_ope_reseau_visa + nb_ope_reseau_cos
-                 + nb_ope_reseau_jcb + nb_ope_reseau_postepargne + nb_ope_reseau_carte_diners_et_discovery
-                 + nb_ope_reseau_carte_cup + nb_ope_reseau_autres)
-              <> ret_nb + cap_nb + cap_cos_nb THEN 1 ELSE 0 END)                     AS ko_somme_reseaux
-FROM ma_base.fiche_identite_gab;
+
