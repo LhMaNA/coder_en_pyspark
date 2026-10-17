@@ -10,7 +10,12 @@ Analyse exploratoire d'un parc de terminaux de retrait, sans modèle, pour compr
 | `analyse_descriptive_terminal_jour.ipynb` | une ligne par terminal et par jour | pandas |
 
 ### Opérations (PySpark)
+- analyse au grain de la transaction : chaque opération garde sa ligne et reçoit ses indicateurs (délai depuis l'opération précédente, opérations dans les 5 minutes, montant répété, captures récentes) ;
+- détection automatique des colonnes, montant délivré calculé à partir des coupures réelles ;
 - qualité de la donnée brute : valeurs manquantes, formats, doublons ;
+- géographie : contrôle des coordonnées, cartes du parc, villes, sites d'implantation ;
+- date de validité des cartes ;
+- carte des terminaux atypiques avec la raison principale ;
 - volumes dans le temps, saisonnalité, rythme jour x heure ;
 - montants, réseaux de cartes, retraits inaboutis, captures de carte ;
 - dynamique à l'intérieur de la journée : délais entre opérations, rafales, silences improbables ;
