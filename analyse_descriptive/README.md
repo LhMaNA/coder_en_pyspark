@@ -6,8 +6,7 @@ Analyse exploratoire d'un parc de terminaux de retrait, pour comprendre le compo
 
 | Élément | Données | Outil |
 |---|---|---|
-| `analyse_retraits_spark.ipynb` | une ligne par opération (plusieurs centaines de millions de lignes) | PySpark |
-| `analyse_terminaux/` | librairie utilisée par le notebook (configuration, préparation, indicateurs, règles, graphiques) | PySpark, pandas |
+| `analyse_retraits_spark.ipynb` | une ligne par opération (plusieurs centaines de millions de lignes) ; notebook autonome, tout le code est dedans | PySpark |
 | `analyse_descriptive_terminal_jour.ipynb` | une ligne par terminal et par jour | pandas |
 
 ### Opérations (PySpark)
@@ -28,9 +27,9 @@ Analyse exploratoire d'un parc de terminaux de retrait, pour comprendre le compo
 - carte du parc (terminaux x jours), profils de comportement, ruptures de niveau.
 
 ## Configuration
-Toutes les valeurs du notebook sont **fictives** : nom du dataset, noms des colonnes, codes réseau, libellés des opérations et des motifs de capture. Elles se remplacent dans la cellule « 1. Configuration » ; le reste du code ne change pas. Les seuils des règles sont dans `analyse_terminaux/configuration.py`.
+Tout ce qui dépend de la table se règle dans la cellule « 1. Configuration » : nom du dataset, noms des colonnes, codes réseau et de cartes (blocs laissés vides, à compléter), libellés des opérations et des motifs de capture, format des dates et des montants. Les seuils des règles sont dans `SEUILS_DEFAUT` (section « Code de l'analyse »).
 
 ## Environnement
-Python 3.6, pandas 1.1, PySpark 2.3, scikit-learn, matplotlib. Le notebook lit les données depuis un dataset Dataiku (ou une table Hive). La librairie se place dans les Libraries du projet (`lib/python/analyse_terminaux`).
+Python 3.6, pandas 1.1, PySpark 2.3, scikit-learn, matplotlib. Le notebook lit les données depuis un dataset Dataiku (ou une table Hive).
 
 Aucune donnée n'est incluse dans ce dépôt.
