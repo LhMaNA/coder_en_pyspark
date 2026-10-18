@@ -1,34 +1,36 @@
 # Analyse descriptive de données de retraits
 
-Analyse exploratoire d'un parc de terminaux de retrait, sans modèle, pour comprendre le comportement normal de chaque terminal et faire apparaître les comportements atypiques avant toute détection automatique.
+Analyse exploratoire d'un parc de terminaux de retrait, pour comprendre le comportement normal de chaque terminal et faire apparaître les comportements atypiques.
 
-## Notebooks
+## Contenu
 
-| Notebook | Données | Outil |
+| Élément | Données | Outil |
 |---|---|---|
-| `analyse_descriptive_operations.ipynb` | une ligne par opération (plusieurs centaines de millions de lignes) | PySpark |
+| `analyse_retraits_spark.ipynb` | une ligne par opération (plusieurs centaines de millions de lignes) | PySpark |
+| `analyse_terminaux/` | librairie utilisée par le notebook (configuration, préparation, indicateurs, règles, graphiques) | PySpark, pandas |
 | `analyse_descriptive_terminal_jour.ipynb` | une ligne par terminal et par jour | pandas |
 
 ### Opérations (PySpark)
 - analyse au grain de la transaction : chaque opération garde sa ligne et reçoit ses indicateurs (délai depuis l'opération précédente, opérations dans les 5 minutes, montant répété, captures récentes) ;
-- détection automatique des colonnes, montant délivré calculé à partir des coupures réelles ;
-- qualité de la donnée brute : valeurs manquantes, formats, doublons ;
-- géographie : contrôle des coordonnées, cartes du parc, villes, sites d'implantation ;
-- date de validité des cartes ;
-- carte des terminaux atypiques avec la raison principale ;
-- volumes dans le temps, saisonnalité, rythme jour x heure ;
-- montants, réseaux de cartes, retraits inaboutis, captures de carte ;
-- dynamique à l'intérieur de la journée : délais entre opérations, rafales, silences improbables ;
-- vues heure par heure du parc et d'un terminal.
+- qualité de la donnée brute, volumes, saisonnalité, profils horaires et hebdomadaires, géographie du parc ;
+- montants, réseaux de cartes, retraits inaboutis, captures, validité des cartes ;
+- 26 règles d'anomalies, chacune comparant le terminal à sa propre habitude :
+  - directes (silence improbable, journée sans opération, rafale, montant répété, inaboutis, captures, cartes étrangères rares, nuit, carte expirée, volume, montant moyen) ;
+  - cachées (forme horaire et mélange de réseaux par divergence de Jensen-Shannon, écart aux terminaux pairs, dérive lente, trou horaire récurrent, combinaison de petits écarts par Isolation Forest) ;
+  - avancées (cassette vide, incident de zone, attaque coordonnée, motif de capture, inaboutis concentrés sur un réseau, rythme trop régulier, heure morte, même carte sur plusieurs terminaux, écart à l'année précédente) ;
+- priorisation : score de risque (gravité x récurrence), regroupement des incidents de zone, budget quotidien d'alertes ;
+- apports métier : saturation, besoin en billets, créneau de maintenance, fiabilité, usage par rapport aux pairs.
 
 ### Terminal-jour (pandas)
 - qualité, cohérence et complétude du calendrier ;
 - distributions, corrélations, saisonnalité ;
-- part de variance entre terminaux et au sein d'un terminal, régularité hebdomadaire ;
 - habitude glissante de chaque terminal et écart robuste (médiane, MAD) ;
-- carte du parc (terminaux x jours), profils de comportement, fiche visuelle d'un terminal, ruptures de niveau.
+- carte du parc (terminaux x jours), profils de comportement, ruptures de niveau.
+
+## Configuration
+Toutes les valeurs du notebook sont **fictives** : nom du dataset, noms des colonnes, codes réseau, libellés des opérations et des motifs de capture. Elles se remplacent dans la cellule « 1. Configuration » ; le reste du code ne change pas. Les seuils des règles sont dans `analyse_terminaux/configuration.py`.
 
 ## Environnement
-Python 3.6, pandas 1.1.5, PySpark 2.3, matplotlib. Les notebooks lisent les données depuis un dataset Dataiku, ou depuis un CSV local (`CHEMIN_CSV_LOCAL`) pour la version terminal-jour.
+Python 3.6, pandas 1.1, PySpark 2.3, scikit-learn, matplotlib. Le notebook lit les données depuis un dataset Dataiku (ou une table Hive). La librairie se place dans les Libraries du projet (`lib/python/analyse_terminaux`).
 
 Aucune donnée n'est incluse dans ce dépôt.
