@@ -1,12 +1,48 @@
-Bonjour,
-
-J'espère que vous allez bien.
-
-Je me permets de vous écrire car j'aurais besoin de la liste des BIN avec, pour chaque BIN, le type de client associé : personne physique (PPH) ou personne morale (PMO).
-
-Auriez-vous ce référentiel ? Cela nous aiderait beaucoup dans le traitement de nos demandes.
-
-Merci beaucoup, et bon week-end.
-
-Bien cordialement,
-Lyna Maria
+SELECT *
+FROM (
+    SELECT
+        r.num_automate,
+        r.date_operation,
+        r.heure_operation AS heure_retrait,
+        r.lib_ope         AS lib_ope_retrait,
+        r.num_carte,
+        r.montant_euros,
+        c.heure_operation AS heure_capture,
+        c.lib_ope         AS lib_ope_capture,
+        c.sec - r.sec     AS ecart_secondes,
+        ROW_NUMBER() OVER (
+            PARTITION BY r.id_retrait
+            ORDER BY ABS(c.sec - r.sec)
+        ) AS rang
+    FROM (
+        -- Retraits COS
+        SELECT
+            CONCAT_WS('_', num_automate, date_operation, heure_operation,
+                      CAST(montant_ope AS STRING), num_carte, lib_ope) AS id_retrait,
+            num_automate, date_operation, heure_operation, lib_ope, num_carte,
+            CAST(montant_ope AS DOUBLE) / 100 AS montant_euros,
+            CAST(SUBSTR(heure_operation, 1, 2) AS INT) * 3600
+          + CAST(SUBSTR(heure_operation, 3, 2) AS INT) * 60
+          + CAST(SUBSTR(heure_operation, 5, 2) AS INT) AS sec
+        FROM <TABLE_RETRAIT>
+        WHERE (type_reseau = '11' OR code_carte_privative = 'COS')
+          AND lib_ope IN ('Retrait', 'Autorisation-Retrait')
+    ) r
+    JOIN (
+        -- Captures de carte (meme table)
+        SELECT
+            num_automate, date_operation, heure_operation, lib_ope, num_carte,
+            CAST(SUBSTR(heure_operation, 1, 2) AS INT) * 3600
+          + CAST(SUBSTR(heure_operation, 3, 2) AS INT) * 60
+          + CAST(SUBSTR(heure_operation, 5, 2) AS INT) AS sec
+        FROM <TABLE_RETRAIT>
+        WHERE lib_ope = '<LIB_OPE_CAPTURE>'
+    ) c
+        ON  r.num_automate   = c.num_automate
+        AND r.date_operation = c.date_operation
+        AND r.num_carte      = c.num_carte
+    -- capture entre 1 min avant et 5 min apres le retrait
+    WHERE c.sec - r.sec BETWEEN -60 AND 300
+) t
+WHERE rang = 1
+;
