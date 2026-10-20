@@ -1,1 +1,9 @@
-
+SELECT
+    DATE_TRUNC('second', date) AS ts,
+    COUNT(*) AS nb_requetes,
+    COUNT(*) / 1.0 AS tps
+FROM ta_table
+WHERE circuit = 'RVM'
+  AND date >= '2025-10-09'
+GROUP BY DATE_TRUNC('second', date)
+ORDER BY ts
