@@ -1,11 +1,62 @@
+Oui, c'est tout à fait normal et cohérent.
+
+**Pourquoi autant de lignes ?**
+
+- **17 millions pour la 1 seconde** : vous avez compté chaque seconde individuelle sur 7 mois × heures d'activité × volume RVM. 7 mois × 30 jours × 10h/jour × 3600 sec = environ 7,5 millions de secondes actives — donc 17M signifie qu'il y a parfois plusieurs transactions par seconde regroupées, c'est logique.
+
+- **16 millions pour les 5 secondes** : fenêtre plus large donc moins de lignes, cohérent.
+
+**Est-ce que ça va marcher dans Excel ?**
+
+❌ **Non, pas directement.** Excel a une limite de **1 048 576 lignes** par onglet. 17 millions de lignes = impossible à coller.
+
+**La solution : modifier les requêtes HiveQL pour sortir les stats déjà agrégées par jour.** Au lieu de coller les lignes brutes, Dataiku calcule le max/moyen/min côté serveur, et vous collez seulement ~235 lignes (1 par jour).
+
+Voici les requêtes corrigées :
+
+**Requête 1s → agrégée par jour :**
+```sql
 SELECT
-    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16) AS heure_minute,
-    (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT) / 5) * 5 AS seconde_5s,
-    COUNT(*) AS tps_5s
-FROM nom_de_ta_table
-WHERE circuit = 'RVM'
-  AND timestamp_postage_mq >= '2026-04-01'
-GROUP BY
-    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16),
-    (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT) / 5) * 5
-ORDER BY heure_minute, seconde_5s
+    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10) AS date_jour,
+    MAX(cnt) AS max_tps,
+    ROUND(AVG(cnt), 1) AS moy_tps,
+    MIN(cnt) AS min_tps,
+    SUM(CASE WHEN cnt > 100 THEN 1 ELSE 0 END) AS nb_depassements
+FROM (
+    SELECT
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19) AS ts,
+        COUNT(*) AS cnt
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+      AND timestamp_postage_mq >= '2026-03-01'
+    GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19)
+) sub
+GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10)
+ORDER BY date_jour
+```
+
+**Requête 5s → agrégée par jour :**
+```sql
+SELECT
+    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10) AS date_jour,
+    MAX(cnt5) AS max_tps,
+    ROUND(AVG(cnt5), 1) AS moy_tps,
+    MIN(cnt5) AS min_tps,
+    SUM(CASE WHEN cnt5 > 500 THEN 1 ELSE 0 END) AS nb_depassements
+FROM (
+    SELECT
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16) AS hm,
+        (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT)/5)*5 AS s5,
+        COUNT(*) AS cnt5
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+      AND timestamp_postage_mq >= '2026-03-01'
+    GROUP BY
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16),
+        (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT)/5)*5
+) sub
+GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10)
+ORDER BY date_jour
+```
+
+Ces requêtes sortent **~235 lignes** (1 par jour) avec déjà le max/moyen/min/dépassements calculés. Je mets à jour le fichier Excel pour accepter ce format ?
