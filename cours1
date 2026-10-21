@@ -1,10 +1,134 @@
+Voilà les 4 requêtes :
+
+---
+
+**1. Par jour** (déjà donnée)
+
+---
+
+**2. Par fenêtre de 5 secondes**
+```sql
 SELECT
-    CONCAT(
-        SUBSTR(date, 1, 19)
-    ) AS ts,
-    COUNT(*) AS tps
-FROM ta_table
+    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16) AS heure_minute,
+    (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT) / 5) * 5 AS seconde_5s,
+    COUNT(*) AS tps_5s
+FROM nom_de_ta_table
 WHERE circuit = 'RVM'
-  AND date >= '2025-10-09'
-GROUP BY SUBSTR(date, 1, 19)
-ORDER BY ts
+  AND timestamp_postage_mq >= '2025-10-09'
+GROUP BY
+    SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 16),
+    (CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT) / 5) * 5
+ORDER BY heure_minute, seconde_5s
+```
+
+---
+
+**3. Par heure**
+```sql
+SELECT
+    CAST(timestamp_postage_mq AS DATE)                   AS date,
+    HOUR(timestamp_postage_mq)                           AS heure,
+    COUNT(*)                                             AS nb_transactions,
+    MAX(tps_sec)                                         AS tps_max,
+    PERCENTILE_APPROX(tps_sec, 0.99)                     AS tps_p99,
+    PERCENTILE_APPROX(tps_sec, 0.95)                     AS tps_p95,
+    AVG(tps_sec)                                         AS tps_moyen
+FROM (
+    SELECT
+        timestamp_postage_mq,
+        COUNT(*) AS tps_sec
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+      AND timestamp_postage_mq >= '2025-10-09'
+    GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19), timestamp_postage_mq
+) t
+GROUP BY
+    CAST(timestamp_postage_mq AS DATE),
+    HOUR(timestamp_postage_mq)
+ORDER BY date, heure
+```
+
+---
+
+**4. Par année**
+```sql
+SELECT
+    YEAR(timestamp_postage_mq)                           AS annee,
+    COUNT(*)                                             AS nb_transactions,
+    MAX(tps_sec)                                         AS tps_max,
+    PERCENTILE_APPROX(tps_sec, 0.99)                     AS tps_p99,
+    PERCENTILE_APPROX(tps_sec, 0.95)                     AS tps_p95,
+    AVG(tps_sec)                                         AS tps_moyen
+FROM (
+    SELECT
+        timestamp_postage_mq,
+        COUNT(*) AS tps_sec
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+    GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19), timestamp_postage_mq
+) t
+GROUP BY YEAR(timestamp_postage_mq)
+ORDER BY annee
+```
+
+---
+
+Ok, remplace par ça — compatible toutes versions Hive :
+
+---
+
+**Par jour** (sans PERCENTILE_APPROX) :
+```sql
+SELECT
+    date,
+    COUNT(*)                                              AS nb_secondes,
+    MAX(tps_sec)                                          AS tps_max,
+    AVG(tps_sec)                                          AS tps_moyen,
+    MIN(tps_sec)                                          AS tps_min,
+    SUM(CASE WHEN tps_sec > 50 THEN 1 ELSE 0 END)         AS nb_depassements
+FROM (
+    SELECT
+        CAST(timestamp_postage_mq AS DATE) AS date,
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19) AS ts_sec,
+        COUNT(*) AS tps_sec
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+      AND timestamp_postage_mq >= '2025-10-09'
+    GROUP BY
+        CAST(timestamp_postage_mq AS DATE),
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19)
+) t
+GROUP BY date
+ORDER BY date
+```
+
+---
+
+**Par heure :**
+```sql
+SELECT
+    CAST(timestamp_postage_mq AS DATE)  AS date,
+    HOUR(timestamp_postage_mq)          AS heure,
+    COUNT(*)                            AS nb_transactions,
+    MAX(tps_sec)                        AS tps_max,
+    AVG(tps_sec)                        AS tps_moyen
+FROM (
+    SELECT
+        timestamp_postage_mq,
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19) AS ts_sec,
+        COUNT(*) AS tps_sec
+    FROM nom_de_ta_table
+    WHERE circuit = 'RVM'
+      AND timestamp_postage_mq >= '2025-10-09'
+    GROUP BY
+        timestamp_postage_mq,
+        SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19)
+) t
+GROUP BY
+    CAST(timestamp_postage_mq AS DATE),
+    HOUR(timestamp_postage_mq)
+ORDER BY date, heure
+```
+
+
+v
