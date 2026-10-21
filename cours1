@@ -1,1 +1,21 @@
-CAST(FLOOR(CAST(SUBSTR(CAST(timestamp_postage_mq AS STRING), 18, 2) AS INT) / 5) AS INT) * 5
+C'est la formule « Date du pic » qui est en cause : j'avais mis un `TEXT(...)` pour formater la date, mais comme ta colonne date est du texte (et avec les codes de format qui changent en Excel français), ça plante. La solution : afficher la date **telle quelle**, sans la reformater.
+
+Dans le **Tableau de bord**, remplace la formule de la cellule « Date du pic » :
+
+**Pour le 1s (cellule C7)** :
+```
+=INDEX('Données 1s'!A4:A1000;EQUIV(MAX('Données 1s'!B4:B1000);'Données 1s'!B4:B1000;0))
+```
+
+**Pour le 5s (cellule C13)** :
+```
+=INDEX('Données 5s'!A4:A1000;EQUIV(MAX('Données 5s'!B4:B1000);'Données 5s'!B4:B1000;0))
+```
+
+(ranges jusqu'à 1000 pour être tranquille quel que soit le nombre de lignes collées)
+
+Ça affichera ta date exactement comme elle est dans ta colonne. Je corrige aussi le fichier modèle pour que ce soit propre si tu le retélécharges un jour :
+
+Le modèle est corrigé aussi, mais pas besoin de le retélécharger — colle juste les deux formules ci-dessus dans ton fichier.
+
+Au cas où après correction tu verrais `#N/A` au lieu de la date : ça voudrait dire que ta colonne **max_tps** a été collée en texte (point décimal au lieu de virgule) — dis-le-moi, c'est un autre réglage rapide.
