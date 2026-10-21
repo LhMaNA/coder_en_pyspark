@@ -1,17 +1,1 @@
-Analyse des fluctuations TPS — circuit RVM (fenêtres 1s et 5s)
-Subject: Analyse des fluctuations TPS — circuit RVM (fenêtres 1s et 5s)
 
-Bonjour,
-
-J'espère que vous allez bien.
-
-Suite à votre demande, vous trouverez ci-joint le fichier Excel d'analyse des fluctuations TPS sur le circuit RVM, sur la période du 1er décembre 2025 au 20 octobre 2026.
-
-Compte tenu du volume des données brutes (plus de 17 millions de lignes par fenêtre d'analyse), il n'était pas possible de vous les transmettre telles quelles. Je vous envoie donc une synthèse agrégée par jour, qui comprend :
-- un tableau de bord avec les indicateurs clés (pic maximal, date et heure du pic, dépassements du plafond, marge disponible) ;
-- le détail journalier et les graphiques pour les fenêtres 1 seconde et 5 secondes, avec le plafond contractuel en référence.
-
-Je reste à votre disposition pour toute question, et n'hésitez pas à me dire si le fichier vous convient ou si vous souhaitez des ajustements.
-
-Merci beaucoup et bonne journée,
-Lyna Maria Hendel
