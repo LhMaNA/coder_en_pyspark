@@ -1,21 +1,17 @@
-C'est la formule « Date du pic » qui est en cause : j'avais mis un `TEXT(...)` pour formater la date, mais comme ta colonne date est du texte (et avec les codes de format qui changent en Excel français), ça plante. La solution : afficher la date **telle quelle**, sans la reformater.
+Analyse des fluctuations TPS — circuit RVM (fenêtres 1s et 5s)
+Subject: Analyse des fluctuations TPS — circuit RVM (fenêtres 1s et 5s)
 
-Dans le **Tableau de bord**, remplace la formule de la cellule « Date du pic » :
+Bonjour,
 
-**Pour le 1s (cellule C7)** :
-```
-=INDEX('Données 1s'!A4:A1000;EQUIV(MAX('Données 1s'!B4:B1000);'Données 1s'!B4:B1000;0))
-```
+J'espère que vous allez bien.
 
-**Pour le 5s (cellule C13)** :
-```
-=INDEX('Données 5s'!A4:A1000;EQUIV(MAX('Données 5s'!B4:B1000);'Données 5s'!B4:B1000;0))
-```
+Suite à votre demande, vous trouverez ci-joint le fichier Excel d'analyse des fluctuations TPS sur le circuit RVM, sur la période du 1er décembre 2025 au 20 octobre 2026.
 
-(ranges jusqu'à 1000 pour être tranquille quel que soit le nombre de lignes collées)
+Compte tenu du volume des données brutes (plus de 17 millions de lignes par fenêtre d'analyse), il n'était pas possible de vous les transmettre telles quelles. Je vous envoie donc une synthèse agrégée par jour, qui comprend :
+- un tableau de bord avec les indicateurs clés (pic maximal, date et heure du pic, dépassements du plafond, marge disponible) ;
+- le détail journalier et les graphiques pour les fenêtres 1 seconde et 5 secondes, avec le plafond contractuel en référence.
 
-Ça affichera ta date exactement comme elle est dans ta colonne. Je corrige aussi le fichier modèle pour que ce soit propre si tu le retélécharges un jour :
+Je reste à votre disposition pour toute question, et n'hésitez pas à me dire si le fichier vous convient ou si vous souhaitez des ajustements.
 
-Le modèle est corrigé aussi, mais pas besoin de le retélécharger — colle juste les deux formules ci-dessus dans ton fichier.
-
-Au cas où après correction tu verrais `#N/A` au lieu de la date : ça voudrait dire que ta colonne **max_tps** a été collée en texte (point décimal au lieu de virgule) — dis-le-moi, c'est un autre réglage rapide.
+Merci beaucoup et bonne journée,
+Lyna Maria Hendel
