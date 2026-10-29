@@ -1,1 +1,33 @@
-pyspark>=2.3
+pyspark>=2.3SELECT
+  m.tps,
+  s.statut,
+  COALESCE(a.nb, 0) AS nb
+FROM (
+  SELECT CONCAT(LPAD(CAST(FLOOR(pos / 60) AS STRING), 2, '0'), ':',
+                LPAD(CAST(pos % 60 AS STRING), 2, '0')) AS tps
+  FROM (SELECT 1 AS x) t
+  LATERAL VIEW POSEXPLODE(SPLIT(SPACE(1439), ' ')) e AS pos, val
+) m
+JOIN (
+  SELECT DISTINCT statut
+  FROM ma_table
+  WHERE `circuit` = 'RVM'
+    AND SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10) = '2026-10-13'
+    AND date_part > 20260000
+    AND `timestamp_iban_check_response` IS NOT NULL
+) s
+  ON 1 = 1
+LEFT JOIN (
+  SELECT
+    SUBSTR(CAST(timestamp_postage_mq AS STRING), 12, 5) AS tps,
+    statut,
+    COUNT(1) AS nb
+  FROM ma_table
+  WHERE `circuit` = 'RVM'
+    AND SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10) = '2026-10-13'
+    AND date_part > 20260000
+    AND `timestamp_iban_check_response` IS NOT NULL
+  GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 12, 5), statut
+) a
+  ON a.tps = m.tps AND a.statut = s.statut
+ORDER BY m.tps, s.statut
