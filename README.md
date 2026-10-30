@@ -21,3 +21,9 @@ python 01_dataframe_basics.py
 
 The scripts use a local Spark session (`local[*]`) and only built-in Spark SQL functions, so they also run
 on a cluster without changes.
+
+## Anomaly detection notebook
+
+`detection_anomalies/detection_anomalies_spark.ipynb`: a self-contained PySpark notebook for anomaly detection
+on transaction data (data quality, seasonality, rule-based detection, prioritisation, daily report). The
+business rules block (network codes, dataset name) is left empty on purpose and must be filled in locally.
