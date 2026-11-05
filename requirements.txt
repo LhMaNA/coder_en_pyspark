@@ -1,13 +1,66 @@
-Subject: RE : Demande TPS circuit RVM – complément d'analyse (NOAP sans réponse)
-
-Bonjour à tous,
-
-En complément des éléments envoyés concernant la demande d'analyse des TPS, nous revenons vers vous après avoir approfondi le sujet.
-
-Nous avons constaté que sur la journée du 13 octobre 2026 notamment, le taux de NOAP sans réponse a été très élevé. Ces requêtes ont un timestamp_event_check_response à NULL (aucune réponse reçue). Elles étaient incluses dans notre première analyse, ce qui gonflait artificiellement les pics de TPS observés.
-
-Nous vous transmettons donc une version de l'analyse hors de ces transactions sans réponse, afin de refléter le trafic réellement traité sur le circuit RVM. Nous avons également ajouté une vue listant l'ensemble des transactions concernées par un dépassement de [20 TPS].
-
-Vous trouverez le fichier mis à jour en pièce jointe. Nous restons disponibles pour en échanger.
-
-Bien cordialement,
+SELECT
+  jour,
+  pic_sec,
+  pic_tps,
+  SUM(CASE WHEN offset_s = -10 THEN tps END) AS m10,
+  SUM(CASE WHEN offset_s =  -9 THEN tps END) AS m9,
+  SUM(CASE WHEN offset_s =  -8 THEN tps END) AS m8,
+  SUM(CASE WHEN offset_s =  -7 THEN tps END) AS m7,
+  SUM(CASE WHEN offset_s =  -6 THEN tps END) AS m6,
+  SUM(CASE WHEN offset_s =  -5 THEN tps END) AS m5,
+  SUM(CASE WHEN offset_s =  -4 THEN tps END) AS m4,
+  SUM(CASE WHEN offset_s =  -3 THEN tps END) AS m3,
+  SUM(CASE WHEN offset_s =  -2 THEN tps END) AS m2,
+  SUM(CASE WHEN offset_s =  -1 THEN tps END) AS m1,
+  SUM(CASE WHEN offset_s =   0 THEN tps END) AS pic,
+  SUM(CASE WHEN offset_s =   1 THEN tps END) AS p1,
+  SUM(CASE WHEN offset_s =   2 THEN tps END) AS p2,
+  SUM(CASE WHEN offset_s =   3 THEN tps END) AS p3,
+  SUM(CASE WHEN offset_s =   4 THEN tps END) AS p4,
+  SUM(CASE WHEN offset_s =   5 THEN tps END) AS p5,
+  SUM(CASE WHEN offset_s =   6 THEN tps END) AS p6,
+  SUM(CASE WHEN offset_s =   7 THEN tps END) AS p7,
+  SUM(CASE WHEN offset_s =   8 THEN tps END) AS p8,
+  SUM(CASE WHEN offset_s =   9 THEN tps END) AS p9,
+  SUM(CASE WHEN offset_s =  10 THEN tps END) AS p10,
+  MIN(CASE WHEN offset_s < 0 THEN tps END) AS min_avant,
+  MAX(CASE WHEN offset_s < 0 THEN tps END) AS max_avant,
+  pic_tps - MIN(CASE WHEN offset_s < 0 THEN tps END) AS saut
+FROM (
+  SELECT
+    p.jour, p.pic_sec, p.pic_tps, o.offset_s,
+    COALESCE(c.nb, 0) AS tps
+  FROM (
+    SELECT 1 AS k,
+      SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10) AS jour,
+      SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19) AS pic_sec,
+      COUNT(*) AS pic_tps
+    FROM `vop_an0`.`vop_emi_vir`
+    WHERE `circuit` = 'RVM'
+      AND date_part > 20260000
+      AND timestamp_iban_check_response IS NOT NULL
+    GROUP BY 1,
+      SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 10),
+      SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19)
+    HAVING COUNT(*) > 20
+  ) p
+  JOIN (
+    SELECT 1 AS k, pos - 10 AS offset_s
+    FROM (SELECT 1 AS x) t
+    LATERAL VIEW POSEXPLODE(SPLIT(SPACE(20), ' ')) e AS pos, val
+  ) o
+    ON p.k = o.k
+  LEFT JOIN (
+    SELECT
+      SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19) AS sec,
+      COUNT(*) AS nb
+    FROM `vop_an0`.`vop_emi_vir`
+    WHERE `circuit` = 'RVM'
+      AND date_part > 20260000
+      AND timestamp_iban_check_response IS NOT NULL
+    GROUP BY SUBSTR(CAST(timestamp_postage_mq AS STRING), 1, 19)
+  ) c
+    ON c.sec = FROM_UNIXTIME(UNIX_TIMESTAMP(p.pic_sec) + o.offset_s)
+) f
+GROUP BY jour, pic_sec, pic_tps
+ORDER BY pic_tps DESC
