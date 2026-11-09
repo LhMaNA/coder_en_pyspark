@@ -1,13 +1,24 @@
 -- =====================================================================================================
--- RECETTE : CASSETTES terminal x HEURE  (entrée du notebook detection_cassettes_terminal)
--- Une ligne par terminal, par jour et par heure ayant au moins un retrait abouti, sur la période choisie.
--- Source unique : la table des retraits (aucune jointure ; code regate = code_site_implantation).
--- Pour chaque position de cassette (1 à 4) : billets sortis, retraits qui l'ont utilisée, valeur déclarée.
--- Période : 8 semaines de référence + la période analysée (ici du 01/09/2026 au 08/11/2026).
--- Uniquement des comptes et des sommes ; la détection est faite dans le notebook.
--- Encaisse théorique (euros, chaîne '0000017190' = 17 190 EUR) : sert à dater les chargements du terminal et à vérifier
--- que l'encaisse baisse exactement du montant de chaque retrait.
--- ADAPTER : top_annul, nb_billetsk7_1..4, val_coupurek7_1..4, format de heure_operation (HHMMSS).
+-- RECETTE SQL (Hive) : CASSETTES PAR terminal ET PAR HEURE
+-- Sert de source au notebook detection_cassettes_terminal. À lancer avant le notebook.
+--
+-- CE QU'ELLE PRODUIT
+--   Une ligne par terminal, par jour et par heure où le terminal a fait au moins un retrait abouti.
+--   Pour chacune des 4 cassettes du terminal : billets sortis, retraits qui l'ont utilisée, valeur du billet (en euros).
+--   Plus : retraits refaits par la même carte en moins de 10 min, encaisse théorique et chargements du terminal.
+--
+-- PÉRIODE
+--   Automatique : les 70 derniers jours (4 semaines d'habitude + la période examinée + une marge).
+--   Pour une période passée précise, remplacer la ligne marquée « PÉRIODE » en bas, par exemple :
+--   WHERE o.date_jour BETWEEN '2026-09-01' AND '2026-11-08'
+--
+-- UNITÉS (vérifiées sur les données réelles)
+--   montant_ope : en centimes (00020000 = 200 €)  ->  divisé par 100
+--   val_coupurek7_1..4 : déjà en euros (10, 20, 50)  ->  utilisé tel quel
+--   encaisse_theorique : en euros, en texte (0000017190 = 17 190 €)
+--   code regate du terminal = code_site_implantation
+--
+-- Source unique : la table des retraits, sans jointure. Uniquement des comptes : la détection est dans le notebook.
 -- =====================================================================================================
 SELECT
     x.num_automate,
@@ -69,8 +80,8 @@ FROM (
                                                                                        AS montant_billets
         FROM `base`.`table_operations`
         WHERE lib_ope IN ('Retrait', 'Autorisation-Retrait')
-          AND CAST(top_annul AS INT) = 0                                               -- ADAPTER nom
+          AND CAST(top_annul AS INT) = 0                                               -- retraits aboutis seulement
     ) o
-    WHERE o.date_jour BETWEEN '2026-09-01' AND '2026-11-08'                            -- ADAPTER période
+    WHERE o.date_jour >= DATE_SUB(CURRENT_DATE, 70)                                     -- PÉRIODE : 70 derniers jours
 ) x
 GROUP BY x.num_automate, x.date_jour, x.h
