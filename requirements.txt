@@ -23,7 +23,7 @@ FROM (
         REGEXP_EXTRACT(TRIM(s.adresse_ok), '^([0-9]+)', 1)                       AS numero_extrait,
         TRIM(REGEXP_REPLACE(LOWER(TRIM(s.adresse_ok)), '^[0-9]+ *(bis|ter|b|t)?[ ,]*', '')) AS rue_extraite,
         LPAD(TRIM(CAST(s.cd_pst_ok AS STRING)), 5, '0')                          AS cp
-    FROM `dss_fallback_lbp_dp`.`referentiel_gab_france` s                        -- sortie de la jointure de base
+    FROM`referentiel_gab_france` s                        -- sortie de la jointure de base
 ) g
 
 LEFT JOIN (
@@ -41,7 +41,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT LOWER(TRIM(nom_voie)) AS nom_voie_ban, LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0') AS cp_ban,
            AVG(CAST(lon AS DOUBLE)) AS lon_rue, AVG(CAST(lat AS DOUBLE)) AS lat_rue
-    FROM `dss_fallback_lbp_dp`.`teste_base_ban_prepared`
+    FROM `teste_base_ban_prepared`
     WHERE lon IS NOT NULL AND lat IS NOT NULL
     GROUP BY LOWER(TRIM(nom_voie)), LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0')
 ) ban_rue
@@ -51,7 +51,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0') AS cp_ban,
            AVG(CAST(lon AS DOUBLE)) AS lon_cp, AVG(CAST(lat AS DOUBLE)) AS lat_cp
-    FROM `dss_fallback_lbp_dp`.`teste_base_ban_prepared`
+    FROM `teste_base_ban_prepared`
     WHERE lon IS NOT NULL AND lat IS NOT NULL
     GROUP BY LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0')
 ) ban_cp
