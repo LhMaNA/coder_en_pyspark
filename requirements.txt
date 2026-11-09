@@ -1,15 +1,1 @@
 
-Bonjour François,
-
-J'espère que je ne te dérange pas. Je reviens vers toi suite à ce dont je t'avais parlé au sujet des GAB endommagés lors des manifestations, notamment à Marseille et à Limoges.
-
-Ma demande est un peu urgente : aurais-tu des exemples d'anomalies ou d'incidents survenus sur les automates au cours des deux dernières années ? Par exemple :
-- des retraits anormaux avec des cartes étrangères ;
-- des GAB qui capturent beaucoup de cartes ;
-- des retraits inaboutis ;
-- ou tout autre type de problème que vous auriez constaté.
-
-Pour chaque cas, l'idéal serait d'avoir le numéro du GAB, la date et le type d'incident. Cela me permettrait de vérifier si notre analyse les détecte bien.
-
-Merci beaucoup pour ton aide !
-Lyna Maria
