@@ -1,6 +1,9 @@
 SELECT
-    x.*,
-    CASE WHEN x.longitude_finale IS NOT NULL AND x.latitude_finale IS NOT NULL
-         THEN CONCAT('POINT (', CAST(x.longitude_finale AS STRING), ' ', CAST(x.latitude_finale AS STRING), ')')
-    END AS geopoint_final
-FROM (
+    o.*,
+    g.cd_pst_ok        AS code_postal,
+    g.latitude_finale  AS latitude,
+    g.longitude_finale AS longitude,
+    g.geopoint_final   AS geopoint
+FROM  RETRAIT  o
+INNER JOIN  GAB  g          -- ADAPTER : sortie de la recette BAN
+        ON o.num_automate = g.num_automate
