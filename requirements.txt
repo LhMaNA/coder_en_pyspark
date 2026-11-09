@@ -1,1 +1,26 @@
-pyspark>=2.3
+SELECT
+    annee, lib_ope, top_annul, type_reseau, code_carte_privative,
+    val_coupurek7_1, val_coupurek7_2, val_coupurek7_3, val_coupurek7_4,
+    motif_capture,
+    COUNT(*)                 AS nb,
+    MIN(heure_operation)     AS heure_min,     MAX(heure_operation)     AS heure_max,
+    MIN(montant_ope)         AS montant_min,   MAX(montant_ope)         AS montant_max,
+    MIN(encaisse_theorique)  AS encaisse_min,  MAX(encaisse_theorique)  AS encaisse_max
+FROM (
+    SELECT
+        SUBSTR(date_operation, 5, 4) AS annee,          -- 03022024 -> 2024
+        lib_ope, top_annul, type_reseau, code_carte_privative,
+        val_coupurek7_1, val_coupurek7_2, val_coupurek7_3, val_coupurek7_4,
+        CASE WHEN lib_ope = 'Capture de Carte' THEN lib_motif_capture_carte END AS motif_capture,
+        heure_operation, montant_ope, encaisse_theorique
+    FROM 
+) t
+GROUP BY annee, lib_ope, top_annul, type_reseau, code_carte_privative,
+         val_coupurek7_1, val_coupurek7_2, val_coupurek7_3, val_coupurek7_4, motif_capture
+GROUPING SETS (
+    (annee),
+    (lib_ope, top_annul),
+    (type_reseau, code_carte_privative),
+    (val_coupurek7_1, val_coupurek7_2, val_coupurek7_3, val_coupurek7_4),
+    (motif_capture)
+)
