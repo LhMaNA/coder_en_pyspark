@@ -1,7 +1,1 @@
-CAS_CONNU = {
-    "debut": "2026-11-04 12:00",
-    "fin": "2026-11-05 12:00",
-    "prefixe_site": "953",
-    "perte_declaree": 6000,
-    "jours_autour": 2,
-}
+pyspark>=2.3
