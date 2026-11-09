@@ -1,9 +1,54 @@
-SELECT
-    o.*,
-    g.cd_pst_ok        AS code_postal,
-    g.latitude_finale  AS latitude,
-    g.longitude_finale AS longitude,
-    g.geopoint_final   AS geopoint
-FROM  RETRAIT  o
-INNER JOIN  GAB  g          -- ADAPTER : sortie de la recette BAN
-        ON o.num_automate = g.num_automate
+SELECT *
+FROM (
+    SELECT
+        cat_reseau,
+        num_automate,
+        jour,
+        nb_retraits,
+        montant_total_euros,
+        montant_moyen_euros,
+        montant_max_euros,
+        ROW_NUMBER() OVER (PARTITION BY cat_reseau ORDER BY nb_retraits DESC) AS rang
+    FROM (
+        SELECT
+            cat_reseau,
+            num_automate,
+            jour,
+            COUNT(*)                AS nb_retraits,
+            ROUND(SUM(montant), 0)  AS montant_total_euros,
+            ROUND(AVG(montant), 1)  AS montant_moyen_euros,
+            MAX(montant)            AS montant_max_euros
+        FROM (
+            SELECT
+                num_automate,
+                SUBSTR(date_operation, 1, 10) AS jour,   -- format AAAA-MM-JJ ; a adapter si JJMMAAAA
+                CAST(montant_ope AS DOUBLE) / 100 AS montant,
+                CASE
+                    WHEN type_reseau = '06' THEN 'Franfinance'
+                    WHEN type_reseau = '00' THEN 'CB'
+                    WHEN type_reseau = '09' THEN 'PPL'
+                    WHEN type_reseau = '02' THEN 'Mastercard'
+                    WHEN type_reseau = '05' THEN 'Cofinoga'
+                    WHEN type_reseau = '03' THEN 'Interne'
+                    WHEN type_reseau = '08' THEN 'Casino'
+                    WHEN type_reseau = '04' THEN 'Accord'
+                    WHEN type_reseau = '07' THEN 'Amex'
+                    WHEN type_reseau = '01' THEN 'Visa'
+                    WHEN type_reseau = '11' THEN 'cos'
+                    WHEN type_reseau = '12' THEN 'JCB'
+                    WHEN code_carte_privative = 'AMX' THEN 'Amex'
+                    WHEN code_carte_privative = 'CUP' THEN 'Carte CUP'
+                    WHEN code_carte_privative = 'DIN' THEN 'Carte Diners et Discovery'
+                    WHEN code_carte_privative = 'JCB' THEN 'JCB'
+                    ELSE 'Autre reseau'
+                END AS cat_reseau
+            FROM <TABLE_RETRAIT>
+            WHERE lib_ope IN ('Retrait', 'Autorisation-Retrait')
+        ) ops
+        WHERE cat_reseau IN ('JCB', 'Carte CUP', 'Amex', 'Carte Diners et Discovery')
+        GROUP BY cat_reseau, num_automate, jour
+    ) agg
+) classe
+WHERE rang <= 10
+ORDER BY cat_reseau, rang
+;
