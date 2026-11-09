@@ -1,11 +1,1 @@
-   COALESCE(c.adresse,   r.adresse)         AS adresse_ok,
-    COALESCE(c.cd_pst,    r.cd_pst)          AS cd_pst_ok,
-    COALESCE(c.ville,     r.ville)           AS ville_ok,
-    COALESCE(c.latitude,  r.latitude_brute)  AS latitude_ok,
-    COALESCE(c.longitude, r.longitude_brute) AS longitude_ok,
-    COALESCE(c.geopoint,  r.geopoint)        AS geopoint_ok,
-    CASE WHEN c.num_gab IS NULL THEN 'referentiel' ELSE 'table_corrigee' END AS source_coordonnees
-FROM referentiel_gab r                   
-LEFT JOIN gab_coordonnees c      
-    ON r.num_automate = c.num_gab
-WHERE r.code_pays = '250' 
+
