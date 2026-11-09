@@ -1,78 +1,78 @@
-SELECT bloc, cle, valeur, exemple
-FROM (
-    -- 3 à 6 : types d'opération, réseaux, plans de cassettes, motifs de capture (1re lecture)
-    SELECT t.bloc, t.cle, CAST(COUNT(*) AS DOUBLE) AS valeur, CAST(NULL AS STRING) AS exemple
-    FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1` o
-    LATERAL VIEW INLINE(ARRAY(
-        STRUCT('3_operation', CONCAT_WS(' | ', COALESCE(CAST(o.lib_ope AS STRING), 'vide'),
-                                               COALESCE(CAST(o.top_annul AS STRING), 'vide'),
-                                               COALESCE(CAST(o.type_porteur AS STRING), 'vide'))),
-        STRUCT('4_reseau', CONCAT_WS(' | ', COALESCE(CAST(o.type_reseau AS STRING), 'vide'),
-                                            COALESCE(CAST(o.code_carte_privative AS STRING), 'vide'))),
-        STRUCT('5_cassettes', CONCAT_WS(' | ', COALESCE(CAST(o.val_coupurek7_1 AS STRING), 'vide'),
-                                               COALESCE(CAST(o.val_coupurek7_2 AS STRING), 'vide'),
-                                               COALESCE(CAST(o.val_coupurek7_3 AS STRING), 'vide'),
-                                               COALESCE(CAST(o.val_coupurek7_4 AS STRING), 'vide'))),
-        STRUCT('6_motif_capture', CASE WHEN o.lib_ope = 'Capture de Carte'
-                                       THEN COALESCE(CAST(o.lib_motif_capture_carte AS STRING), 'vide') END)
-    )) t AS bloc, cle
-    WHERE t.cle IS NOT NULL
-    GROUP BY t.bloc, t.cle
+SELECT
+    -- volumes et période
+    COUNT(*)                                                   AS nb_lignes,
+    COUNT(DISTINCT num_automate)                               AS nb_gab,
+    COUNT(DISTINCT date_operation)                             AS nb_jours,
+    MIN(date_operation)  AS date_min,      MAX(date_operation)  AS date_max,
+    MIN(heure_operation) AS heure_min,     MAX(heure_operation) AS heure_max,
+    MIN(montant_ope)     AS montant_min,   MAX(montant_ope)     AS montant_max,
+    MIN(encaisse_theorique) AS encaisse_min, MAX(encaisse_theorique) AS encaisse_max,
 
-    UNION ALL
+    -- types d'opération
+    SUM(CASE WHEN lib_ope = 'Retrait'              THEN 1 ELSE 0 END) AS nb_retrait,
+    SUM(CASE WHEN lib_ope = 'Autorisation-Retrait' THEN 1 ELSE 0 END) AS nb_autorisation_retrait,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte'     THEN 1 ELSE 0 END) AS nb_capture,
+    SUM(CASE WHEN lib_ope NOT IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte') OR lib_ope IS NULL
+             THEN 1 ELSE 0 END)                                       AS nb_autre_operation,
 
-    -- 1 : volumes par année et activité d'un GAB-jour (2e lecture)
-    SELECT '1_volumes', CONCAT(a.annee, ' ', m.indicateur), m.valeur, CAST(NULL AS STRING)
-    FROM (
-        SELECT annee,
-               SUM(nb) AS nb_lignes, COUNT(DISTINCT num_automate) AS nb_gab, COUNT(*) AS nb_gab_jours,
-               PERCENTILE_APPROX(CAST(nb AS DOUBLE), 0.1) AS p10, PERCENTILE_APPROX(CAST(nb AS DOUBLE), 0.5) AS mediane,
-               PERCENTILE_APPROX(CAST(nb AS DOUBLE), 0.9) AS p90, MAX(nb) AS maxi
-        FROM (
-            SELECT num_automate, jour,
-                   CASE WHEN jour LIKE '____-%' THEN SUBSTR(jour, 1, 4) ELSE SUBSTR(jour, 5, 4) END AS annee,
-                   COUNT(*) AS nb
-            FROM (
-                SELECT num_automate,
-                       CASE WHEN CAST(date_operation AS STRING) LIKE '____-%'
-                            THEN SUBSTR(CAST(date_operation AS STRING), 1, 10)
-                            ELSE SUBSTR(LPAD(CAST(date_operation AS STRING), 8, '0'), 1, 8) END AS jour
-                FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1`
-            ) j
-            GROUP BY num_automate, jour
-        ) d
-        GROUP BY annee
-    ) a
-    LATERAL VIEW INLINE(ARRAY(
-        STRUCT('nb_lignes', CAST(a.nb_lignes AS DOUBLE)), STRUCT('nb_gab', CAST(a.nb_gab AS DOUBLE)),
-        STRUCT('nb_gab_jours', CAST(a.nb_gab_jours AS DOUBLE)),
-        STRUCT('ope_par_gab_jour_p10', a.p10), STRUCT('ope_par_gab_jour_mediane', a.mediane),
-        STRUCT('ope_par_gab_jour_p90', a.p90), STRUCT('ope_par_gab_jour_max', CAST(a.maxi AS DOUBLE))
-    )) m AS indicateur, valeur
+    -- inaboutis et porteurs
+    SUM(CASE WHEN CAST(top_annul AS INT) = 1 THEN 1 ELSE 0 END)       AS nb_top_annul_1,
+    SUM(CASE WHEN CAST(top_annul AS INT) = 0 THEN 1 ELSE 0 END)       AS nb_top_annul_0,
+    SUM(CASE WHEN type_porteur = 'Porteur' THEN 1 ELSE 0 END)         AS nb_porteur,
+    SUM(CASE WHEN montant_ope IS NULL OR CAST(montant_ope AS DOUBLE) <= 0 THEN 1 ELSE 0 END) AS nb_montant_nul,
 
-    UNION ALL
+    -- type_reseau
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '00' THEN 1 ELSE 0 END) AS reseau_00,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '01' THEN 1 ELSE 0 END) AS reseau_01,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '02' THEN 1 ELSE 0 END) AS reseau_02,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '03' THEN 1 ELSE 0 END) AS reseau_03,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '04' THEN 1 ELSE 0 END) AS reseau_04,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '05' THEN 1 ELSE 0 END) AS reseau_05,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '06' THEN 1 ELSE 0 END) AS reseau_06,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '07' THEN 1 ELSE 0 END) AS reseau_07,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '08' THEN 1 ELSE 0 END) AS reseau_08,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '09' THEN 1 ELSE 0 END) AS reseau_09,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '10' THEN 1 ELSE 0 END) AS reseau_10,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '11' THEN 1 ELSE 0 END) AS reseau_11,
+    SUM(CASE WHEN LPAD(CAST(type_reseau AS STRING), 2, '0') = '12' THEN 1 ELSE 0 END) AS reseau_12,
+    SUM(CASE WHEN type_reseau IS NULL OR LPAD(CAST(type_reseau AS STRING), 2, '0') NOT IN
+             ('00','01','02','03','04','05','06','07','08','09','10','11','12') THEN 1 ELSE 0 END) AS reseau_autre,
 
-    -- 2 : formats des colonnes (plus petite et plus grande valeur sur un échantillon de 1 000 lignes)
-    SELECT '2_format', f.colonne, CAST(NULL AS DOUBLE), CONCAT(MIN(f.v), '   ...   ', MAX(f.v))
-    FROM (SELECT * FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1` LIMIT 1000) s
-    LATERAL VIEW INLINE(ARRAY(
-        STRUCT('date_operation', CAST(s.date_operation AS STRING)),
-        STRUCT('heure_operation', CAST(s.heure_operation AS STRING)),
-        STRUCT('montant_ope', CAST(s.montant_ope AS STRING)),
-        STRUCT('encaisse_theorique', CAST(s.encaisse_theorique AS STRING)),
-        STRUCT('top_annul', CAST(s.top_annul AS STRING)),
-        STRUCT('nb_billetsk7_1', CAST(s.nb_billetsk7_1 AS STRING)),
-        STRUCT('val_coupurek7_1', CAST(s.val_coupurek7_1 AS STRING)),
-        STRUCT('code_site_implantation', CAST(s.code_site_implantation AS STRING))
-    )) f AS colonne, v
-    GROUP BY f.colonne
+    -- code_carte_privative
+    SUM(CASE WHEN code_carte_privative IS NULL THEN 1 ELSE 0 END) AS priv_null,
+    SUM(CASE WHEN code_carte_privative = ''    THEN 1 ELSE 0 END) AS priv_vide,
+    SUM(CASE WHEN code_carte_privative = 'AMX' THEN 1 ELSE 0 END) AS priv_amx,
+    SUM(CASE WHEN code_carte_privative = 'COS' THEN 1 ELSE 0 END) AS priv_cos,
+    SUM(CASE WHEN code_carte_privative = 'CFC' THEN 1 ELSE 0 END) AS priv_cfc,
+    SUM(CASE WHEN code_carte_privative = 'CUP' THEN 1 ELSE 0 END) AS priv_cup,
+    SUM(CASE WHEN code_carte_privative = 'C24' THEN 1 ELSE 0 END) AS priv_c24,
+    SUM(CASE WHEN code_carte_privative = 'DIN' THEN 1 ELSE 0 END) AS priv_din,
+    SUM(CASE WHEN code_carte_privative = 'E21' THEN 1 ELSE 0 END) AS priv_e21,
+    SUM(CASE WHEN code_carte_privative = 'FCB' THEN 1 ELSE 0 END) AS priv_fcb,
+    SUM(CASE WHEN code_carte_privative = 'FCE' THEN 1 ELSE 0 END) AS priv_fce,
+    SUM(CASE WHEN code_carte_privative = 'JCB' THEN 1 ELSE 0 END) AS priv_jcb,
+    SUM(CASE WHEN code_carte_privative = 'PRA' THEN 1 ELSE 0 END) AS priv_pra,
+    SUM(CASE WHEN code_carte_privative = 'PRI' THEN 1 ELSE 0 END) AS priv_pri,
+    SUM(CASE WHEN code_carte_privative = '-'   THEN 1 ELSE 0 END) AS priv_tiret,
+    SUM(CASE WHEN code_carte_privative NOT IN ('', 'AMX', 'COS', 'CFC', 'CUP', 'C24', 'DIN', 'E21', 'FCB', 'FCE',
+             'JCB', 'PRA', 'PRI', '-') THEN 1 ELSE 0 END)     AS priv_autre,
 
-    UNION ALL
+    -- motifs de capture
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%OUBLI%'   THEN 1 ELSE 0 END) AS cap_oubli,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%LECT%'    THEN 1 ELSE 0 END) AS cap_lecture,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%CODE%'    THEN 1 ELSE 0 END) AS cap_code,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%PERDU%'   THEN 1 ELSE 0 END) AS cap_perdue,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%VOL%'     THEN 1 ELSE 0 END) AS cap_volee,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND UPPER(lib_motif_capture_carte) LIKE '%CONSERV%' THEN 1 ELSE 0 END) AS cap_conserver,
+    SUM(CASE WHEN lib_ope = 'Capture de Carte' AND (lib_motif_capture_carte IS NULL OR TRIM(lib_motif_capture_carte) = '')
+             THEN 1 ELSE 0 END)                                                                                    AS cap_sans_motif,
 
-    -- 8 : statuts du référentiel
-    SELECT '8_statut_referentiel', COALESCE(CAST(statut_gab AS STRING), 'vide'), CAST(COUNT(*) AS DOUBLE), CAST(NULL AS STRING)
-    FROM `dss_fallback_lbp_dp`.`referentiel_gab_final`
-    GROUP BY statut_gab
-) u
-ORDER BY bloc, valeur DESC
-
+    -- cassettes : lignes où au moins une position est déclarée à cette valeur (en centimes)
+    SUM(CASE WHEN 500   IN (CAST(val_coupurek7_1 AS INT), CAST(val_coupurek7_2 AS INT), CAST(val_coupurek7_3 AS INT), CAST(val_coupurek7_4 AS INT)) THEN 1 ELSE 0 END) AS avec_cassette_5,
+    SUM(CASE WHEN 1000  IN (CAST(val_coupurek7_1 AS INT), CAST(val_coupurek7_2 AS INT), CAST(val_coupurek7_3 AS INT), CAST(val_coupurek7_4 AS INT)) THEN 1 ELSE 0 END) AS avec_cassette_10,
+    SUM(CASE WHEN 2000  IN (CAST(val_coupurek7_1 AS INT), CAST(val_coupurek7_2 AS INT), CAST(val_coupurek7_3 AS INT), CAST(val_coupurek7_4 AS INT)) THEN 1 ELSE 0 END) AS avec_cassette_20,
+    SUM(CASE WHEN 5000  IN (CAST(val_coupurek7_1 AS INT), CAST(val_coupurek7_2 AS INT), CAST(val_coupurek7_3 AS INT), CAST(val_coupurek7_4 AS INT)) THEN 1 ELSE 0 END) AS avec_cassette_50,
+    SUM(CASE WHEN 10000 IN (CAST(val_coupurek7_1 AS INT), CAST(val_coupurek7_2 AS INT), CAST(val_coupurek7_3 AS INT), CAST(val_coupurek7_4 AS INT)) THEN 1 ELSE 0 END) AS avec_cassette_100,
+    MIN(val_coupurek7_1) AS coupure_min, MAX(val_coupurek7_1) AS coupure_max,
+    MIN(nb_billetsk7_1)  AS billets_min, MAX(nb_billetsk7_1)  AS billets_max
+FROM `dss_fallback_lbp_dp`.`reporting_t_dlk_mon_nf2_ope_retrait_v1`
