@@ -58,14 +58,14 @@ FROM (
           + CAST(SUBSTR(LPAD(CAST(heure_operation AS STRING), 6, '0'), 5, 2) AS INT)   AS sec,
             CAST(montant_ope AS DOUBLE) / 100                                          AS montant,
             CAST(REGEXP_REPLACE(CAST(encaisse_theorique AS STRING), '[^0-9]', '') AS DOUBLE) AS encaisse,   -- en euros
-            COALESCE(CAST(nb_billetsk7_1 AS INT), 0) AS nb1, CAST(val_coupurek7_1 AS INT) / 100 AS val1,
-            COALESCE(CAST(nb_billetsk7_2 AS INT), 0) AS nb2, CAST(val_coupurek7_2 AS INT) / 100 AS val2,
-            COALESCE(CAST(nb_billetsk7_3 AS INT), 0) AS nb3, CAST(val_coupurek7_3 AS INT) / 100 AS val3,
-            COALESCE(CAST(nb_billetsk7_4 AS INT), 0) AS nb4, CAST(val_coupurek7_4 AS INT) / 100 AS val4,
+            COALESCE(CAST(nb_billetsk7_1 AS INT), 0) AS nb1, CAST(val_coupurek7_1 AS INT) AS val1,
+            COALESCE(CAST(nb_billetsk7_2 AS INT), 0) AS nb2, CAST(val_coupurek7_2 AS INT) AS val2,
+            COALESCE(CAST(nb_billetsk7_3 AS INT), 0) AS nb3, CAST(val_coupurek7_3 AS INT) AS val3,
+            COALESCE(CAST(nb_billetsk7_4 AS INT), 0) AS nb4, CAST(val_coupurek7_4 AS INT) AS val4,
             (COALESCE(CAST(nb_billetsk7_1 AS DOUBLE), 0) * COALESCE(CAST(val_coupurek7_1 AS DOUBLE), 0)
            + COALESCE(CAST(nb_billetsk7_2 AS DOUBLE), 0) * COALESCE(CAST(val_coupurek7_2 AS DOUBLE), 0)
            + COALESCE(CAST(nb_billetsk7_3 AS DOUBLE), 0) * COALESCE(CAST(val_coupurek7_3 AS DOUBLE), 0)
-           + COALESCE(CAST(nb_billetsk7_4 AS DOUBLE), 0) * COALESCE(CAST(val_coupurek7_4 AS DOUBLE), 0)) / 100
+           + COALESCE(CAST(nb_billetsk7_4 AS DOUBLE), 0) * COALESCE(CAST(val_coupurek7_4 AS DOUBLE), 0))
                                                                                        AS montant_billets
         FROM `base`.`table_operations`
         WHERE lib_ope IN ('Retrait', 'Autorisation-Retrait')
