@@ -1,48 +1,11 @@
-
-    CAST(SUBSTR(heure_retrait, 1, 2) AS INT) * 3600
-  + CAST(SUBSTR(heure_retrait, 3, 2) AS INT) * 60
-  + CAST(SUBSTR(heure_retrait, 5, 2) AS INT)            AS heure_retrait_seconde
-
-
----------------------------------------------------------------
-
-    CAST(SUBSTR(heure_delivrance, 1, 2) AS INT) * 3600
-  + CAST(SUBSTR(heure_delivrance, 3, 2) AS INT) * 60
-  + CAST(SUBSTR(heure_delivrance, 5, 2) AS INT)         AS heure_delivrance_seconde,
-    CAST(SUBSTR(heure_delivrance, 1, 2) AS INT) * 3600
-  + CAST(SUBSTR(heure_delivrance, 3, 2) AS INT) * 60
-  + CAST(SUBSTR(heure_delivrance, 5, 2) AS INT) + 45 * 60 AS heure_delivrance_seconde_plus_45
-------------------------------------------------------------------------------------------
-
-SELECT g.*
-FROM retraits_guichets g
-WHERE EXISTS (
-    SELECT 1
-    FROM retraits_cos c
-    WHERE c.code_bureau = g.code_bureau
-      AND c.date_ope    = g.date_ope
-      AND c.heure_retrait_seconde BETWEEN g.heure_delivrance_seconde AND g.heure_delivrance_seconde_plus_45
-)
-
-----------------------------------------------------
-
-
-
-SELECT
-    code_bureau,
-    SUBSTR(CAST(date_ope AS STRING), 1, 6) AS mois,
-    COUNT(*)      AS nb_retraits_cos,
-    SUM(montant)  AS montant_retraits_cos
-FROM retraits_cos
-GROUP BY code_bureau, SUBSTR(CAST(date_ope AS STRING), 1, 6)
-
-5. Opérations guichet-COS par mois
-
-sql
-SELECT
-    code_bureau,
-    SUBSTR(CAST(date_ope AS STRING), 1, 6) AS mois,
-    COUNT(*)      AS nb_operations_guichet_cos,
-    SUM(montant)  AS montant_operations_guichet_cos
-FROM operation_guichet_cos
-GROUP BY code_bureau, SUBSTR(CAST(date_ope AS STRING), 1, 6)
+   COALESCE(c.adresse,   r.adresse)         AS adresse_ok,
+    COALESCE(c.cd_pst,    r.cd_pst)          AS cd_pst_ok,
+    COALESCE(c.ville,     r.ville)           AS ville_ok,
+    COALESCE(c.latitude,  r.latitude_brute)  AS latitude_ok,
+    COALESCE(c.longitude, r.longitude_brute) AS longitude_ok,
+    COALESCE(c.geopoint,  r.geopoint)        AS geopoint_ok,
+    CASE WHEN c.num_gab IS NULL THEN 'referentiel' ELSE 'table_corrigee' END AS source_coordonnees
+FROM referentiel_gab r                   
+LEFT JOIN gab_coordonnees c      
+    ON r.num_automate = c.num_gab
+WHERE r.code_pays = '250' 
