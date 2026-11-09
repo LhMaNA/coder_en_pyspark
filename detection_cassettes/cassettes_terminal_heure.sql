@@ -1,22 +1,19 @@
 -- =====================================================================================================
 -- RECETTE : CASSETTES terminal x HEURE  (entrée du notebook detection_cassettes_terminal)
 -- Une ligne par terminal, par jour et par heure ayant au moins un retrait abouti, sur la période choisie.
+-- Source unique : la table des retraits (aucune jointure ; code regate = code_site_implantation).
 -- Pour chaque position de cassette (1 à 4) : billets sortis, retraits qui l'ont utilisée, valeur déclarée.
 -- Période : 8 semaines de référence + la période analysée (ici du 01/09/2026 au 08/11/2026).
 -- Uniquement des comptes et des sommes ; la détection est faite dans le notebook.
 -- Encaisse théorique (euros, chaîne '0000017190' = 17 190 EUR) : sert à dater les chargements du terminal et à vérifier
 -- que l'encaisse baisse exactement du montant de chaque retrait.
--- ADAPTER : top_annul, nb_billetsk_7_1..4, val_coupurek_7_1..4, format de heure_operation (HHMMSS),
---           colonnes cd_regate / code_site_implantation, nom du référentiel final.
+-- ADAPTER : top_annul, nb_billetsk_7_1..4, val_coupurek_7_1..4, format de heure_operation (HHMMSS).
 -- =====================================================================================================
 SELECT
     x.num_automate,
     x.date_jour,
     x.h                                                                   AS heure,
-    MAX(x.code_site_implantation)                                         AS code_site_implantation,
-    MAX(r.cd_regate)                                                      AS cd_regate,
-    MAX(r.cd_pst_ok)                                                      AS code_postal,
-    MAX(r.ville_ok)                                                       AS ville,
+    MAX(x.code_site_implantation)                                         AS code_site_implantation,   -- code regate
 
     COUNT(*)                                                              AS nb_retraits,
     SUM(x.montant)                                                        AS montant_total,
@@ -50,7 +47,7 @@ FROM (
         SELECT
             num_automate,
             num_carte,
-            code_site_implantation,                                                    -- ADAPTER si absent
+            code_site_implantation,                                                    -- code regate du terminal
             CASE WHEN CAST(date_operation AS STRING) LIKE '____-__-__%'
                  THEN TO_DATE(SUBSTR(CAST(date_operation AS STRING), 1, 10))
                  ELSE TO_DATE(FROM_UNIXTIME(UNIX_TIMESTAMP(LPAD(CAST(date_operation AS STRING), 8, '0'), 'ddMMyyyy')))
@@ -76,6 +73,4 @@ FROM (
     ) o
     WHERE o.date_jour BETWEEN '2026-09-01' AND '2026-11-08'                            -- ADAPTER période
 ) x
-LEFT JOIN `base`.`referentiel_terminaux` r                             -- ADAPTER
-       ON x.num_automate = r.num_automate
 GROUP BY x.num_automate, x.date_jour, x.h
