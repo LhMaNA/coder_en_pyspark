@@ -1,59 +1,6 @@
 SELECT
-    g.*,
-
-    CASE WHEN g.source_coordonnees = 'table_corrigee' THEN g.longitude_ok
-         ELSE COALESCE(ban_exact.lon_exacte, ban_rue.lon_rue, ban_cp.lon_cp, g.longitude_ok)
-    END AS longitude_finale,
-
-    CASE WHEN g.source_coordonnees = 'table_corrigee' THEN g.latitude_ok
-         ELSE COALESCE(ban_exact.lat_exacte, ban_rue.lat_rue, ban_cp.lat_cp, g.latitude_ok)
-    END AS latitude_finale,
-
-    CASE
-        WHEN g.source_coordonnees = 'table_corrigee' THEN 'TABLE_CORRIGEE'
-        WHEN ban_exact.lat_exacte IS NOT NULL      THEN 'BAN_ADRESSE_EXACTE'
-        WHEN ban_rue.lat_rue      IS NOT NULL      THEN 'BAN_RUE_MEDIANE'
-        WHEN ban_cp.lat_cp        IS NOT NULL      THEN 'BAN_CODE_POSTAL_CENTROIDE'
-        ELSE 'REFERENTIEL_NON_CONTROLE'
-    END AS niveau_precision
-
+    x.*,
+    CASE WHEN x.longitude_finale IS NOT NULL AND x.latitude_finale IS NOT NULL
+         THEN CONCAT('POINT (', CAST(x.longitude_finale AS STRING), ' ', CAST(x.latitude_finale AS STRING), ')')
+    END AS geopoint_final
 FROM (
-    SELECT
-        s.*,
-        REGEXP_EXTRACT(TRIM(s.adresse_ok), '^([0-9]+)', 1)                       AS numero_extrait,
-        TRIM(REGEXP_REPLACE(LOWER(TRIM(s.adresse_ok)), '^[0-9]+ *(bis|ter|b|t)?[ ,]*', '')) AS rue_extraite,
-        LPAD(TRIM(CAST(s.cd_pst_ok AS STRING)), 5, '0')                          AS cp
-    FROM`referentiel_gab_france` s                        -- sortie de la jointure de base
-) g
-
-LEFT JOIN (
-    SELECT TRIM(CAST(numero AS STRING)) AS numero_ban, LOWER(TRIM(nom_voie)) AS nom_voie_ban,
-           LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0') AS cp_ban,
-           AVG(CAST(lon AS DOUBLE)) AS lon_exacte, AVG(CAST(lat AS DOUBLE)) AS lat_exacte
-    FROM `dss_fallback_lbp_dp`.`teste_base_ban_prepared`
-    WHERE lon IS NOT NULL AND lat IS NOT NULL
-    GROUP BY TRIM(CAST(numero AS STRING)), LOWER(TRIM(nom_voie)), LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0')
-) ban_exact
-       ON g.numero_extrait = ban_exact.numero_ban
-      AND g.rue_extraite   = ban_exact.nom_voie_ban
-      AND g.cp             = ban_exact.cp_ban
-
-LEFT JOIN (
-    SELECT LOWER(TRIM(nom_voie)) AS nom_voie_ban, LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0') AS cp_ban,
-           AVG(CAST(lon AS DOUBLE)) AS lon_rue, AVG(CAST(lat AS DOUBLE)) AS lat_rue
-    FROM `teste_base_ban_prepared`
-    WHERE lon IS NOT NULL AND lat IS NOT NULL
-    GROUP BY LOWER(TRIM(nom_voie)), LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0')
-) ban_rue
-       ON g.rue_extraite = ban_rue.nom_voie_ban
-      AND g.cp           = ban_rue.cp_ban
-
-LEFT JOIN (
-    SELECT LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0') AS cp_ban,
-           AVG(CAST(lon AS DOUBLE)) AS lon_cp, AVG(CAST(lat AS DOUBLE)) AS lat_cp
-    FROM `teste_base_ban_prepared`
-    WHERE lon IS NOT NULL AND lat IS NOT NULL
-    GROUP BY LPAD(TRIM(CAST(code_postal AS STRING)), 5, '0')
-) ban_cp
-       ON g.cp = ban_cp.cp_ban
-
