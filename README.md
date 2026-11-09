@@ -34,3 +34,14 @@ business rules block (network codes, dataset name) is left empty on purpose and 
 behaviour after an external event (stopped, reduced or increased activity), compared with each terminal's own
 habit and with the same period of the previous year. `impact_terminaux_resultats_fictifs.ipynb` is the same
 notebook executed on simulated data. The dataset name is left empty and must be filled in locally.
+
+## Cash cassette incident detection
+
+`detection_cassettes/`: detects rare cash-cassette incidents on terminals (swapped 10 € / 20 € cassettes,
+wrong cassette configuration, jammed or empty cassette, repeated withdrawals by the same card). Each terminal is
+compared hour by hour with its own habit over the previous four weeks; cassette loadings are dated from the
+theoretical cash balance.
+
+- `cassettes_terminal_heure.sql`: Hive recipe, one row per terminal, day and hour (table names are placeholders).
+- `detection_cassettes.ipynb`: the notebook (the known-case block is left empty).
+- `detection_cassettes_resultats_fictifs.ipynb`: the same notebook executed on simulated data.
