@@ -1,6 +1,7 @@
 -- =====================================================================================================
 -- CONTRÔLES DE COHÉRENCE DE LA FICHE : la table brute agrégée doit redonner EXACTEMENT les chiffres de la fiche
 -- À lancer après la fiche sur octobre 2026 (fiche produite avec les deux filtres -- TEST).
+-- Même table d'entrée que la fiche (la table jointe) : les deux doivent donner exactement les mêmes chiffres.
 -- Trois requêtes indépendantes, à lancer l'une après l'autre (chacune renvoie un petit tableau).
 --   Contrôle 1 : totaux du mois, brut contre fiche (2 lignes, mêmes colonnes : tout doit être identique)
 --   Contrôle 2 : GAB x jour, brut contre fiche : nombre de couples qui diffèrent (tout doit être à 0)
@@ -41,7 +42,7 @@ SELECT 'brut' AS source,
                    OR CAST(SUBSTR(LPAD(CAST(heure_operation AS STRING), 6, '0'), 1, 2) AS INT) < 6) THEN 1 ELSE 0 END) AS nb_nuit_22h_6h,
        COUNT(DISTINCT TRIM(CAST(num_automate AS STRING)))                                   AS nb_gab,
        COUNT(DISTINCT date_operation)                                                       AS nb_jours
-FROM `base`.`table_operations`
+FROM `base`.`table_operations_jointe`
 WHERE TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte')
   AND date_operation LIKE '__102026'
 
@@ -103,7 +104,7 @@ FULL OUTER JOIN (
         SUM(CASE WHEN TRIM(lib_ope) <> 'Capture de Carte' AND COALESCE(CAST(top_annul AS INT), 0) = 0
                  THEN COALESCE(CAST(nb_billetsk7_1 AS INT), 0) + COALESCE(CAST(nb_billetsk7_2 AS INT), 0)
                     + COALESCE(CAST(nb_billetsk7_3 AS INT), 0) + COALESCE(CAST(nb_billetsk7_4 AS INT), 0) ELSE 0 END) AS nb_billets_total
-    FROM `base`.`table_operations`
+    FROM `base`.`table_operations_jointe`
     WHERE TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte')
       AND date_operation LIKE '__102026'
     GROUP BY TRIM(CAST(num_automate AS STRING)),
@@ -139,7 +140,7 @@ FULL OUTER JOIN (
         SUM(CASE WHEN TRIM(lib_ope) <> 'Capture de Carte' AND COALESCE(CAST(top_annul AS INT), 0) = 0
                  THEN CAST(montant_ope AS DOUBLE) / 100 ELSE 0 END)                                                   AS montant_total,
         SUM(CASE WHEN TRIM(lib_ope) = 'Capture de Carte' THEN 1 ELSE 0 END)                                            AS nb_captures
-    FROM `base`.`table_operations`
+    FROM `base`.`table_operations_jointe`
     WHERE TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte')
       AND date_operation LIKE '__102026'
     GROUP BY TRIM(CAST(num_automate AS STRING)),
