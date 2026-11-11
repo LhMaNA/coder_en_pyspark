@@ -1,5 +1,5 @@
 -- =====================================================================================================
--- FICHE D'IDENTITÉ GAB x JOUR, en une seule requête (180 colonnes, voir dictionnaire_fiche_gab_jour.csv)
+-- FICHE D'IDENTITÉ GAB x JOUR, en une seule requête (170 colonnes, voir dictionnaire_fiche_gab_jour.csv)
 -- Entrées : table des opérations brutes + référentiel GAB final (sortie de la recette BAN)
 -- Sortie  : une ligne par GAB et par jour, du premier jour d'opération du GAB jusqu'à la fin des données
 --           (jusqu'à son dernier jour d'opération s'il est FERME), y compris les jours sans opération (0).
@@ -126,25 +126,15 @@ FROM (
         COALESCE(a.nb_billets_20, 0) AS nb_billets_20,
         COALESCE(a.nb_billets_50, 0) AS nb_billets_50,
         COALESCE(a.nb_billets_100, 0) AS nb_billets_100,
+        COALESCE(a.nb_retraits_avec_10, 0) AS nb_retraits_avec_10,
+        COALESCE(a.nb_retraits_avec_20, 0) AS nb_retraits_avec_20,
+        COALESCE(a.nb_retraits_avec_50, 0) AS nb_retraits_avec_50,
+        COALESCE(a.nb_retraits_avec_100, 0) AS nb_retraits_avec_100,
         COALESCE(a.nb_billets_total, 0) AS nb_billets_total,
         COALESCE(a.montant_billets_distribues, 0) AS montant_billets_distribues,
         COALESCE(a.nb_retraits_100plus_sans_billet_50, 0) AS nb_retraits_100plus_sans_billet_50,
-        COALESCE(a.nb_billets_pos1, 0) AS nb_billets_pos1,
-        COALESCE(a.nb_retraits_pos1, 0) AS nb_retraits_pos1,
-        a.val_min_pos1,
-        a.val_max_pos1,
-        COALESCE(a.nb_billets_pos2, 0) AS nb_billets_pos2,
-        COALESCE(a.nb_retraits_pos2, 0) AS nb_retraits_pos2,
-        a.val_min_pos2,
-        a.val_max_pos2,
-        COALESCE(a.nb_billets_pos3, 0) AS nb_billets_pos3,
-        COALESCE(a.nb_retraits_pos3, 0) AS nb_retraits_pos3,
-        a.val_min_pos3,
-        a.val_max_pos3,
-        COALESCE(a.nb_billets_pos4, 0) AS nb_billets_pos4,
-        COALESCE(a.nb_retraits_pos4, 0) AS nb_retraits_pos4,
-        a.val_min_pos4,
-        a.val_max_pos4,
+        a.plan_cassettes,
+        COALESCE(a.nb_plans_cassettes, 0) AS nb_plans_cassettes,
         COALESCE(a.nb_retraits_repetes_10min, 0) AS nb_retraits_repetes_10min,
 
         -- 7. Encaisse et chargements
@@ -369,25 +359,15 @@ FROM (
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN b20 ELSE 0 END) AS nb_billets_20,
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN b50 ELSE 0 END) AS nb_billets_50,
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN b100 ELSE 0 END) AS nb_billets_100,
+            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND b10 > 0 THEN 1 ELSE 0 END) AS nb_retraits_avec_10,
+            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND b20 > 0 THEN 1 ELSE 0 END) AS nb_retraits_avec_20,
+            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND b50 > 0 THEN 1 ELSE 0 END) AS nb_retraits_avec_50,
+            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND b100 > 0 THEN 1 ELSE 0 END) AS nb_retraits_avec_100,
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN nb1 + nb2 + nb3 + nb4 ELSE 0 END) AS nb_billets_total,
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN montant_billets ELSE 0 END) AS montant_billets_distribues,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND montant >= 100 AND b50 = 0 AND (val1 = 50 OR val2 = 50 OR val3 = 50 OR val4 = 50) THEN 1 ELSE 0 END) AS nb_retraits_100plus_sans_billet_50,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN nb1 ELSE 0 END) AS nb_billets_pos1,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb1 > 0 THEN 1 ELSE 0 END) AS nb_retraits_pos1,
-            MIN(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb1 > 0 THEN val1 END) AS val_min_pos1,
-            MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb1 > 0 THEN val1 END) AS val_max_pos1,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN nb2 ELSE 0 END) AS nb_billets_pos2,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb2 > 0 THEN 1 ELSE 0 END) AS nb_retraits_pos2,
-            MIN(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb2 > 0 THEN val2 END) AS val_min_pos2,
-            MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb2 > 0 THEN val2 END) AS val_max_pos2,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN nb3 ELSE 0 END) AS nb_billets_pos3,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb3 > 0 THEN 1 ELSE 0 END) AS nb_retraits_pos3,
-            MIN(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb3 > 0 THEN val3 END) AS val_min_pos3,
-            MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb3 > 0 THEN val3 END) AS val_max_pos3,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN nb4 ELSE 0 END) AS nb_billets_pos4,
-            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb4 > 0 THEN 1 ELSE 0 END) AS nb_retraits_pos4,
-            MIN(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb4 > 0 THEN val4 END) AS val_min_pos4,
-            MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND nb4 > 0 THEN val4 END) AS val_max_pos4,
+            SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND montant >= 100 AND b50 = 0 AND plan LIKE '%50%' THEN 1 ELSE 0 END) AS nb_retraits_100plus_sans_billet_50,
+            MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN plan END) AS plan_cassettes,
+            COUNT(DISTINCT CASE WHEN type_op <> 'CAP' AND inabouti = 0 THEN plan END) AS nb_plans_cassettes,
             SUM(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND num_carte IS NOT NULL AND ecart_meme_carte_sec BETWEEN 0 AND 600 THEN 1 ELSE 0 END) AS nb_retraits_repetes_10min,
             CAST(SUBSTR(MIN(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND encaisse IS NOT NULL THEN CONCAT(LPAD(CAST(sec AS STRING), 5, '0'), LPAD(CAST(CAST(encaisse AS BIGINT) AS STRING), 12, '0')) END), 6) AS DOUBLE) AS encaisse_debut,
             CAST(SUBSTR(MAX(CASE WHEN type_op <> 'CAP' AND inabouti = 0 AND encaisse IS NOT NULL THEN CONCAT(LPAD(CAST(sec AS STRING), 5, '0'), LPAD(CAST(CAST(encaisse AS BIGINT) AS STRING), 12, '0')) END), 6) AS DOUBLE) AS encaisse_fin,
@@ -534,6 +514,7 @@ FROM (
                   + CASE WHEN CAST(val_coupurek7_2 AS INT) = 100 THEN COALESCE(CAST(nb_billetsk7_2 AS INT), 0) ELSE 0 END
                   + CASE WHEN CAST(val_coupurek7_3 AS INT) = 100 THEN COALESCE(CAST(nb_billetsk7_3 AS INT), 0) ELSE 0 END
                   + CASE WHEN CAST(val_coupurek7_4 AS INT) = 100 THEN COALESCE(CAST(nb_billetsk7_4 AS INT), 0) ELSE 0 END) AS b100,
+                    CONCAT_WS('/', CAST(COALESCE(CAST(val_coupurek7_1 AS INT), 0) AS STRING), CAST(COALESCE(CAST(val_coupurek7_2 AS INT), 0) AS STRING), CAST(COALESCE(CAST(val_coupurek7_3 AS INT), 0) AS STRING), CAST(COALESCE(CAST(val_coupurek7_4 AS INT), 0) AS STRING)) AS plan,
                     (CASE WHEN CAST(val_coupurek7_1 AS INT) IN (5, 10, 20, 50, 100) OR COALESCE(CAST(nb_billetsk7_1 AS INT), 0) = 0 THEN 0 ELSE COALESCE(CAST(nb_billetsk7_1 AS INT), 0) END
                   + CASE WHEN CAST(val_coupurek7_2 AS INT) IN (5, 10, 20, 50, 100) OR COALESCE(CAST(nb_billetsk7_2 AS INT), 0) = 0 THEN 0 ELSE COALESCE(CAST(nb_billetsk7_2 AS INT), 0) END
                   + CASE WHEN CAST(val_coupurek7_3 AS INT) IN (5, 10, 20, 50, 100) OR COALESCE(CAST(nb_billetsk7_3 AS INT), 0) = 0 THEN 0 ELSE COALESCE(CAST(nb_billetsk7_3 AS INT), 0) END
