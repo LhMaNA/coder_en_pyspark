@@ -81,8 +81,8 @@ ordre;colonne;groupe;description;jour sans opération
 80;heure_dernier_retrait;5. Forme de la journée;Heure du dernier retrait tenté (HHMMSS);vide
 81;nb_heures_actives;5. Forme de la journée;Nombre d'heures avec au moins un retrait tenté;0
 82;plus_long_trou_min;5. Forme de la journée;Plus long temps sans aucune opération (retrait, inabouti ou capture) dans la journée, de minuit à minuit (minutes);vide
-83;nb_ope_heure_pic;5. Forme de la journée;Opérations (tous types) dans l'heure la plus chargée;0
-84;heure_pic;5. Forme de la journée;"Heure la plus chargée (0 à 23) ; en cas d'égalité, la plus tôt";vide
+83;nb_ope_heure_pic_ope;5. Forme de la journée;Opérations de tous types (retraits, inaboutis, captures) dans l'heure la plus chargée en opérations;0
+84;heure_pic_ope;5. Forme de la journée;"Heure (0 à 23) la plus chargée en opérations de tous types ; à égalité, la plus tôt. Pour les retraits seuls : heure_pic_retraits";vide
 85;heure_pic_retraits;5. Forme de la journée;"Heure (0 à 23) où il y a eu le plus de retraits aboutis ; à égalité, celle au montant le plus élevé, puis la plus tôt";vide
 86;nb_retraits_heure_pic;5. Forme de la journée;Retraits aboutis pendant l'heure de pic;0
 87;montant_heure_pic;5. Forme de la journée;Montant retiré pendant l'heure de pic (€, arrondi);0
