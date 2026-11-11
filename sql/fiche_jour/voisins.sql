@@ -24,18 +24,27 @@ FROM (
                   POW(SIN(RADIANS(b.lat - a.lat) / 2), 2)
                 + COS(RADIANS(a.lat)) * COS(RADIANS(b.lat)) * POW(SIN(RADIANS(b.lon - a.lon) / 2), 2))), 2) AS distance_km
         FROM (
+            -- chaque GAB, répété pour les 9 cases autour de la sienne (la sienne comprise) ;
+            -- l'explosion est faite dans une sous-requête : Hive n'accepte pas un JOIN directement sur un LATERAL VIEW
             SELECT
-                TRIM(CAST(num_automate AS STRING))     AS num_automate,
-                CAST(latitude_finale AS DOUBLE)        AS lat,
-                CAST(longitude_finale AS DOUBLE)       AS lon,
-                FLOOR(CAST(latitude_finale AS DOUBLE) / 0.05)  AS case_lat,
-                FLOOR(CAST(longitude_finale AS DOUBLE) / 0.05) AS case_lon
-            FROM `base`.`referentiel_gab`
-            WHERE latitude_finale IS NOT NULL AND longitude_finale IS NOT NULL
+                a0.num_automate,
+                a0.lat,
+                a0.lon,
+                a0.case_lat + d_lat AS case_lat_voisine,
+                a0.case_lon + d_lon AS case_lon_voisine
+            FROM (
+                SELECT
+                    TRIM(CAST(num_automate AS STRING))     AS num_automate,
+                    CAST(latitude_finale AS DOUBLE)        AS lat,
+                    CAST(longitude_finale AS DOUBLE)       AS lon,
+                    FLOOR(CAST(latitude_finale AS DOUBLE) / 0.05)  AS case_lat,
+                    FLOOR(CAST(longitude_finale AS DOUBLE) / 0.05) AS case_lon
+                FROM `base`.`referentiel_gab`
+                WHERE latitude_finale IS NOT NULL AND longitude_finale IS NOT NULL
+            ) a0
+            LATERAL VIEW EXPLODE(ARRAY(-1, 0, 1)) dl AS d_lat
+            LATERAL VIEW EXPLODE(ARRAY(-1, 0, 1)) dn AS d_lon
         ) a
-        -- les 9 cases autour de celle du GAB (la sienne comprise)
-        LATERAL VIEW EXPLODE(ARRAY(-1, 0, 1)) dl AS d_lat
-        LATERAL VIEW EXPLODE(ARRAY(-1, 0, 1)) dn AS d_lon
         JOIN (
             SELECT
                 TRIM(CAST(num_automate AS STRING))     AS num_automate,
@@ -46,8 +55,8 @@ FROM (
             FROM `base`.`referentiel_gab`
             WHERE latitude_finale IS NOT NULL AND longitude_finale IS NOT NULL
         ) b
-          ON  b.case_lat = a.case_lat + d_lat
-         AND b.case_lon = a.case_lon + d_lon
+          ON  b.case_lat = a.case_lat_voisine
+         AND b.case_lon = a.case_lon_voisine
         WHERE b.num_automate <> a.num_automate
     ) d
     WHERE d.distance_km <= 3.0                                   -- RAYON
