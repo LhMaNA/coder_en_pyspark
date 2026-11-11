@@ -83,96 +83,99 @@ ordre;colonne;groupe;description;jour sans opération
 82;plus_long_trou_min;5. Forme de la journée;Plus long temps sans aucune opération (retrait, inabouti ou capture) dans la journée, de minuit à minuit (minutes);vide
 83;nb_ope_heure_pic;5. Forme de la journée;Opérations (tous types) dans l'heure la plus chargée;0
 84;heure_pic;5. Forme de la journée;"Heure la plus chargée (0 à 23) ; en cas d'égalité, la plus tôt";vide
-85;nb_billets_5;6. Billets et cassettes;Billets de 5 € distribués;0
-86;nb_billets_10;6. Billets et cassettes;Billets de 10 € distribués;0
-87;nb_billets_20;6. Billets et cassettes;Billets de 20 € distribués;0
-88;nb_billets_50;6. Billets et cassettes;Billets de 50 € distribués;0
-89;nb_billets_100;6. Billets et cassettes;Billets de 100 € distribués;0
-90;nb_billets_total;6. Billets et cassettes;Billets distribués dans la journée, toutes valeurs;0
-91;montant_billets_distribues;6. Billets et cassettes;"Valeur des billets distribués d'après les cassettes (€) ; à comparer à montant_total";0
-92;nb_retraits_100plus_sans_billet_50;6. Billets et cassettes;Retraits ≥ 100 € servis sans billet de 50 € alors que le GAB a une cassette de 50 € (cassette vide ou bloquée ?);0
-93;nb_billets_pos1;6. Billets et cassettes;Billets sortis de la cassette 1;0
-94;nb_retraits_pos1;6. Billets et cassettes;Retraits ayant utilisé la cassette 1;0
-95;val_min_pos1;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 1 dans la journée (€);vide
-96;val_max_pos1;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 1 dans la journée (€) ; min ≠ max = valeur changée";vide
-97;nb_billets_pos2;6. Billets et cassettes;Billets sortis de la cassette 2;0
-98;nb_retraits_pos2;6. Billets et cassettes;Retraits ayant utilisé la cassette 2;0
-99;val_min_pos2;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 2 dans la journée (€);vide
-100;val_max_pos2;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 2 dans la journée (€) ; min ≠ max = valeur changée";vide
-101;nb_billets_pos3;6. Billets et cassettes;Billets sortis de la cassette 3;0
-102;nb_retraits_pos3;6. Billets et cassettes;Retraits ayant utilisé la cassette 3;0
-103;val_min_pos3;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 3 dans la journée (€);vide
-104;val_max_pos3;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 3 dans la journée (€) ; min ≠ max = valeur changée";vide
-105;nb_billets_pos4;6. Billets et cassettes;Billets sortis de la cassette 4;0
-106;nb_retraits_pos4;6. Billets et cassettes;Retraits ayant utilisé la cassette 4;0
-107;val_min_pos4;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 4 dans la journée (€);vide
-108;val_max_pos4;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 4 dans la journée (€) ; min ≠ max = valeur changée";vide
-109;nb_retraits_repetes_10min;6. Billets et cassettes;Retraits aboutis refaits avec le même numéro de carte masqué moins de 10 min après un retrait abouti (minuit compris) : client qui revient, signal clé de l'inversion de cassettes;0
-110;encaisse_debut;7. Encaisse et chargements;Encaisse théorique au premier retrait du jour (€), telle qu'enregistrée sur la ligne;vide
-111;encaisse_fin;7. Encaisse et chargements;Encaisse théorique au dernier retrait du jour (€), telle qu'enregistrée sur la ligne;vide
-112;encaisse_min;7. Encaisse et chargements;Encaisse théorique la plus basse du jour (€);vide
-113;encaisse_max;7. Encaisse et chargements;Encaisse théorique la plus haute du jour (€);vide
-114;nb_recharges;7. Encaisse et chargements;Chargements : remontées de l'encaisse entre deux retraits;0
-115;montant_recharge;7. Encaisse et chargements;Montant total chargé (€);0
-116;montant_max_chargement;7. Encaisse et chargements;Plus gros chargement de la journée (€);vide
-117;heure_premier_chargement;7. Encaisse et chargements;Heure du premier chargement (HHMMSS, heure du premier retrait qui le constate);vide
-118;encaisse_avant_chargement;7. Encaisse et chargements;Encaisse juste avant le premier chargement du jour (€) : à quel niveau le GAB était descendu;vide
-119;baisse_encaisse_retraits;7. Encaisse et chargements;"Baisse totale de l'encaisse entre retraits aboutis successifs (€), le passage de la veille compris ; à comparer à montant_total";0
-120;nb_incoherences_encaisse;7. Encaisse et chargements;Baisses d'encaisse différentes du montant retiré;0
-121;nb_ret_interne;8. Réseaux de carte;Retraits aboutis, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
-122;montant_interne;8. Réseaux de carte;Montant retiré, cartes internes : réseau 03, avec ou sans produit carte CPE / C24 (€);0
-123;nb_inab_interne;8. Réseaux de carte;Inaboutis, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
-124;nb_cap_interne;8. Réseaux de carte;Captures, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
-125;nb_ret_cb;8. Réseaux de carte;Retraits aboutis, cartes CB, réseau 00;0
-126;montant_cb;8. Réseaux de carte;Montant retiré, cartes CB, réseau 00 (€);0
-127;nb_inab_cb;8. Réseaux de carte;Inaboutis, cartes CB, réseau 00;0
-128;nb_cap_cb;8. Réseaux de carte;Captures, cartes CB, réseau 00;0
-129;nb_ret_visa;8. Réseaux de carte;Retraits aboutis, cartes Visa, réseau 01;0
-130;montant_visa;8. Réseaux de carte;Montant retiré, cartes Visa, réseau 01 (€);0
-131;nb_inab_visa;8. Réseaux de carte;Inaboutis, cartes Visa, réseau 01;0
-132;nb_cap_visa;8. Réseaux de carte;Captures, cartes Visa, réseau 01;0
-133;nb_ret_mastercard;8. Réseaux de carte;Retraits aboutis, cartes Mastercard, réseau 02;0
-134;montant_mastercard;8. Réseaux de carte;Montant retiré, cartes Mastercard, réseau 02 (€);0
-135;nb_inab_mastercard;8. Réseaux de carte;Inaboutis, cartes Mastercard, réseau 02;0
-136;nb_cap_mastercard;8. Réseaux de carte;Captures, cartes Mastercard, réseau 02;0
-137;nb_ret_cos;8. Réseaux de carte;Retraits aboutis, cartes COS, réseau 11;0
-138;montant_cos;8. Réseaux de carte;Montant retiré, cartes COS, réseau 11 (€);0
-139;nb_inab_cos;8. Réseaux de carte;Inaboutis, cartes COS, réseau 11;0
-140;nb_cap_cos;8. Réseaux de carte;Captures, cartes COS, réseau 11;0
-141;nb_ret_amex;8. Réseaux de carte;Retraits aboutis, cartes American Express, réseau 07;0
-142;montant_amex;8. Réseaux de carte;Montant retiré, cartes American Express, réseau 07 (€);0
-143;nb_inab_amex;8. Réseaux de carte;Inaboutis, cartes American Express, réseau 07;0
-144;nb_cap_amex;8. Réseaux de carte;Captures, cartes American Express, réseau 07;0
-145;nb_ret_cup;8. Réseaux de carte;Retraits aboutis, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
-146;montant_cup;8. Réseaux de carte;Montant retiré, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP (€);0
-147;nb_inab_cup;8. Réseaux de carte;Inaboutis, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
-148;nb_cap_cup;8. Réseaux de carte;Captures, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
-149;nb_ret_diners;8. Réseaux de carte;Retraits aboutis, cartes Trionis Diners : réseau 10 + code privatif DIN;0
-150;montant_diners;8. Réseaux de carte;Montant retiré, cartes Trionis Diners : réseau 10 + code privatif DIN (€);0
-151;nb_inab_diners;8. Réseaux de carte;Inaboutis, cartes Trionis Diners : réseau 10 + code privatif DIN;0
-152;nb_cap_diners;8. Réseaux de carte;Captures, cartes Trionis Diners : réseau 10 + code privatif DIN;0
-153;nb_ret_jcb;8. Réseaux de carte;Retraits aboutis, cartes JCB, réseau 12 (très rare);0
-154;montant_jcb;8. Réseaux de carte;Montant retiré, cartes JCB, réseau 12 (très rare) (€);0
-155;nb_inab_jcb;8. Réseaux de carte;Inaboutis, cartes JCB, réseau 12 (très rare);0
-156;nb_cap_jcb;8. Réseaux de carte;Captures, cartes JCB, réseau 12 (très rare);0
-157;nb_ret_autre;8. Réseaux de carte;Retraits aboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
-158;montant_autre;8. Réseaux de carte;Montant retiré, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0) (€);0
-159;nb_inab_autre;8. Réseaux de carte;Inaboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
-160;nb_cap_autre;8. Réseaux de carte;Captures, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
-161;nb_ret_trionis;8. Réseaux de carte;Retraits aboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
-162;montant_trionis;8. Réseaux de carte;Montant retiré, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners) (€);0
-163;nb_inab_trionis;8. Réseaux de carte;Inaboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
-164;nb_cap_trionis;8. Réseaux de carte;Captures, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
-165;nb_ret_exotique;8. Réseaux de carte;Retraits aboutis, cartes exotiques (Amex, UnionPay, Diners, JCB);0
-166;montant_exotique;8. Réseaux de carte;Montant retiré, cartes exotiques (Amex, UnionPay, Diners, JCB) (€);0
-167;nb_inab_exotique;8. Réseaux de carte;Inaboutis, cartes exotiques (Amex, UnionPay, Diners, JCB);0
-168;nb_cap_exotique;8. Réseaux de carte;Captures, cartes exotiques (Amex, UnionPay, Diners, JCB);0
-169;nb_ret_etranger_sur;8. Réseaux de carte;Retraits aboutis, cartes étrangères sûres (UnionPay, JCB);0
-170;montant_etranger_sur;8. Réseaux de carte;Montant retiré, cartes étrangères sûres (UnionPay, JCB) (€);0
-171;nb_inab_etranger_sur;8. Réseaux de carte;Inaboutis, cartes étrangères sûres (UnionPay, JCB);0
-172;nb_cap_etranger_sur;8. Réseaux de carte;Captures, cartes étrangères sûres (UnionPay, JCB);0
-173;nb_retraits_montant_zero;9. Qualité des données;Retraits tentés à 0 €;0
-174;nb_retraits_montant_invalide;9. Qualité des données;Montant négatif ou vide;0
-175;nb_heure_invalide;9. Qualité des données;Heure d'opération illisible;0
-176;nb_retraits_sans_carte;9. Qualité des données;Retraits tentés sans numéro de carte masqué : s'ils sont nombreux, les retraits refaits et les numéros distincts sont sous-estimés;0
-177;nb_billets_valeur_inconnue;9. Qualité des données;Billets sortis d'une cassette dont la valeur n'est ni 5, 10, 20, 50 ni 100 € (doit rester à 0);0
+85;heure_pic_retraits;5. Forme de la journée;"Heure (0 à 23) où il y a eu le plus de retraits aboutis ; à égalité, celle au montant le plus élevé, puis la plus tôt";vide
+86;nb_retraits_heure_pic;5. Forme de la journée;Retraits aboutis pendant l'heure de pic;0
+87;montant_heure_pic;5. Forme de la journée;Montant retiré pendant l'heure de pic (€, arrondi);0
+88;nb_billets_5;6. Billets et cassettes;Billets de 5 € distribués;0
+89;nb_billets_10;6. Billets et cassettes;Billets de 10 € distribués;0
+90;nb_billets_20;6. Billets et cassettes;Billets de 20 € distribués;0
+91;nb_billets_50;6. Billets et cassettes;Billets de 50 € distribués;0
+92;nb_billets_100;6. Billets et cassettes;Billets de 100 € distribués;0
+93;nb_billets_total;6. Billets et cassettes;Billets distribués dans la journée, toutes valeurs;0
+94;montant_billets_distribues;6. Billets et cassettes;"Valeur des billets distribués d'après les cassettes (€) ; à comparer à montant_total";0
+95;nb_retraits_100plus_sans_billet_50;6. Billets et cassettes;Retraits ≥ 100 € servis sans billet de 50 € alors que le GAB a une cassette de 50 € (cassette vide ou bloquée ?);0
+96;nb_billets_pos1;6. Billets et cassettes;Billets sortis de la cassette 1;0
+97;nb_retraits_pos1;6. Billets et cassettes;Retraits ayant utilisé la cassette 1;0
+98;val_min_pos1;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 1 dans la journée (€);vide
+99;val_max_pos1;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 1 dans la journée (€) ; min ≠ max = valeur changée";vide
+100;nb_billets_pos2;6. Billets et cassettes;Billets sortis de la cassette 2;0
+101;nb_retraits_pos2;6. Billets et cassettes;Retraits ayant utilisé la cassette 2;0
+102;val_min_pos2;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 2 dans la journée (€);vide
+103;val_max_pos2;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 2 dans la journée (€) ; min ≠ max = valeur changée";vide
+104;nb_billets_pos3;6. Billets et cassettes;Billets sortis de la cassette 3;0
+105;nb_retraits_pos3;6. Billets et cassettes;Retraits ayant utilisé la cassette 3;0
+106;val_min_pos3;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 3 dans la journée (€);vide
+107;val_max_pos3;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 3 dans la journée (€) ; min ≠ max = valeur changée";vide
+108;nb_billets_pos4;6. Billets et cassettes;Billets sortis de la cassette 4;0
+109;nb_retraits_pos4;6. Billets et cassettes;Retraits ayant utilisé la cassette 4;0
+110;val_min_pos4;6. Billets et cassettes;Plus petite valeur déclarée de la cassette 4 dans la journée (€);vide
+111;val_max_pos4;6. Billets et cassettes;"Plus grande valeur déclarée de la cassette 4 dans la journée (€) ; min ≠ max = valeur changée";vide
+112;nb_retraits_repetes_10min;6. Billets et cassettes;Retraits aboutis refaits avec le même numéro de carte masqué moins de 10 min après un retrait abouti (minuit compris) : client qui revient, signal clé de l'inversion de cassettes;0
+113;encaisse_debut;7. Encaisse et chargements;Encaisse théorique au premier retrait du jour (€), telle qu'enregistrée sur la ligne;vide
+114;encaisse_fin;7. Encaisse et chargements;Encaisse théorique au dernier retrait du jour (€), telle qu'enregistrée sur la ligne;vide
+115;encaisse_min;7. Encaisse et chargements;Encaisse théorique la plus basse du jour (€);vide
+116;encaisse_max;7. Encaisse et chargements;Encaisse théorique la plus haute du jour (€);vide
+117;nb_recharges;7. Encaisse et chargements;Chargements : remontées de l'encaisse entre deux retraits;0
+118;montant_recharge;7. Encaisse et chargements;Montant total chargé (€);0
+119;montant_max_chargement;7. Encaisse et chargements;Plus gros chargement de la journée (€);vide
+120;heure_premier_chargement;7. Encaisse et chargements;Heure du premier chargement (HHMMSS, heure du premier retrait qui le constate);vide
+121;encaisse_avant_chargement;7. Encaisse et chargements;Encaisse juste avant le premier chargement du jour (€) : à quel niveau le GAB était descendu;vide
+122;baisse_encaisse_retraits;7. Encaisse et chargements;"Baisse totale de l'encaisse entre retraits aboutis successifs (€), le passage de la veille compris ; à comparer à montant_total";0
+123;nb_incoherences_encaisse;7. Encaisse et chargements;Baisses d'encaisse différentes du montant retiré;0
+124;nb_ret_interne;8. Réseaux de carte;Retraits aboutis, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
+125;montant_interne;8. Réseaux de carte;Montant retiré, cartes internes : réseau 03, avec ou sans produit carte CPE / C24 (€);0
+126;nb_inab_interne;8. Réseaux de carte;Inaboutis, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
+127;nb_cap_interne;8. Réseaux de carte;Captures, cartes internes : réseau 03, avec ou sans produit carte CPE / C24;0
+128;nb_ret_cb;8. Réseaux de carte;Retraits aboutis, cartes CB, réseau 00;0
+129;montant_cb;8. Réseaux de carte;Montant retiré, cartes CB, réseau 00 (€);0
+130;nb_inab_cb;8. Réseaux de carte;Inaboutis, cartes CB, réseau 00;0
+131;nb_cap_cb;8. Réseaux de carte;Captures, cartes CB, réseau 00;0
+132;nb_ret_visa;8. Réseaux de carte;Retraits aboutis, cartes Visa, réseau 01;0
+133;montant_visa;8. Réseaux de carte;Montant retiré, cartes Visa, réseau 01 (€);0
+134;nb_inab_visa;8. Réseaux de carte;Inaboutis, cartes Visa, réseau 01;0
+135;nb_cap_visa;8. Réseaux de carte;Captures, cartes Visa, réseau 01;0
+136;nb_ret_mastercard;8. Réseaux de carte;Retraits aboutis, cartes Mastercard, réseau 02;0
+137;montant_mastercard;8. Réseaux de carte;Montant retiré, cartes Mastercard, réseau 02 (€);0
+138;nb_inab_mastercard;8. Réseaux de carte;Inaboutis, cartes Mastercard, réseau 02;0
+139;nb_cap_mastercard;8. Réseaux de carte;Captures, cartes Mastercard, réseau 02;0
+140;nb_ret_cos;8. Réseaux de carte;Retraits aboutis, cartes COS, réseau 11;0
+141;montant_cos;8. Réseaux de carte;Montant retiré, cartes COS, réseau 11 (€);0
+142;nb_inab_cos;8. Réseaux de carte;Inaboutis, cartes COS, réseau 11;0
+143;nb_cap_cos;8. Réseaux de carte;Captures, cartes COS, réseau 11;0
+144;nb_ret_amex;8. Réseaux de carte;Retraits aboutis, cartes American Express, réseau 07;0
+145;montant_amex;8. Réseaux de carte;Montant retiré, cartes American Express, réseau 07 (€);0
+146;nb_inab_amex;8. Réseaux de carte;Inaboutis, cartes American Express, réseau 07;0
+147;nb_cap_amex;8. Réseaux de carte;Captures, cartes American Express, réseau 07;0
+148;nb_ret_cup;8. Réseaux de carte;Retraits aboutis, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
+149;montant_cup;8. Réseaux de carte;Montant retiré, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP (€);0
+150;nb_inab_cup;8. Réseaux de carte;Inaboutis, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
+151;nb_cap_cup;8. Réseaux de carte;Captures, cartes Trionis UnionPay (UPI) : réseau 10 + code privatif CUP;0
+152;nb_ret_diners;8. Réseaux de carte;Retraits aboutis, cartes Trionis Diners : réseau 10 + code privatif DIN;0
+153;montant_diners;8. Réseaux de carte;Montant retiré, cartes Trionis Diners : réseau 10 + code privatif DIN (€);0
+154;nb_inab_diners;8. Réseaux de carte;Inaboutis, cartes Trionis Diners : réseau 10 + code privatif DIN;0
+155;nb_cap_diners;8. Réseaux de carte;Captures, cartes Trionis Diners : réseau 10 + code privatif DIN;0
+156;nb_ret_jcb;8. Réseaux de carte;Retraits aboutis, cartes JCB, réseau 12 (très rare);0
+157;montant_jcb;8. Réseaux de carte;Montant retiré, cartes JCB, réseau 12 (très rare) (€);0
+158;nb_inab_jcb;8. Réseaux de carte;Inaboutis, cartes JCB, réseau 12 (très rare);0
+159;nb_cap_jcb;8. Réseaux de carte;Captures, cartes JCB, réseau 12 (très rare);0
+160;nb_ret_autre;8. Réseaux de carte;Retraits aboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
+161;montant_autre;8. Réseaux de carte;Montant retiré, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0) (€);0
+162;nb_inab_autre;8. Réseaux de carte;Inaboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
+163;nb_cap_autre;8. Réseaux de carte;Captures, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
+164;nb_ret_trionis;8. Réseaux de carte;Retraits aboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
+165;montant_trionis;8. Réseaux de carte;Montant retiré, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners) (€);0
+166;nb_inab_trionis;8. Réseaux de carte;Inaboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
+167;nb_cap_trionis;8. Réseaux de carte;Captures, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
+168;nb_ret_exotique;8. Réseaux de carte;Retraits aboutis, cartes exotiques (Amex, UnionPay, Diners, JCB);0
+169;montant_exotique;8. Réseaux de carte;Montant retiré, cartes exotiques (Amex, UnionPay, Diners, JCB) (€);0
+170;nb_inab_exotique;8. Réseaux de carte;Inaboutis, cartes exotiques (Amex, UnionPay, Diners, JCB);0
+171;nb_cap_exotique;8. Réseaux de carte;Captures, cartes exotiques (Amex, UnionPay, Diners, JCB);0
+172;nb_ret_etranger_sur;8. Réseaux de carte;Retraits aboutis, cartes étrangères sûres (UnionPay, JCB);0
+173;montant_etranger_sur;8. Réseaux de carte;Montant retiré, cartes étrangères sûres (UnionPay, JCB) (€);0
+174;nb_inab_etranger_sur;8. Réseaux de carte;Inaboutis, cartes étrangères sûres (UnionPay, JCB);0
+175;nb_cap_etranger_sur;8. Réseaux de carte;Captures, cartes étrangères sûres (UnionPay, JCB);0
+176;nb_retraits_montant_zero;9. Qualité des données;Retraits tentés à 0 €;0
+177;nb_retraits_montant_invalide;9. Qualité des données;Montant négatif ou vide;0
+178;nb_heure_invalide;9. Qualité des données;Heure d'opération illisible;0
+179;nb_retraits_sans_carte;9. Qualité des données;Retraits tentés sans numéro de carte masqué : s'ils sont nombreux, les retraits refaits et les numéros distincts sont sous-estimés;0
+180;nb_billets_valeur_inconnue;9. Qualité des données;Billets sortis d'une cassette dont la valeur n'est ni 5, 10, 20, 50 ni 100 € (doit rester à 0);0
