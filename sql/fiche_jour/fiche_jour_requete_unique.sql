@@ -1,11 +1,11 @@
 -- =====================================================================================================
--- FICHE D'IDENTITÉ GAB x JOUR, en une seule requête (190 colonnes, voir dictionnaire_fiche_gab_jour.csv)
--- Entrées : table des opérations brutes + référentiel GAB final (sortie de la recette BAN)
+-- FICHE D'IDENTITÉ GAB x JOUR, en une seule requête (187 colonnes, voir dictionnaire_fiche_gab_jour.csv)
+-- Entrée  : UNE SEULE TABLE, les opérations déjà jointes au référentiel GAB (jointure faite en amont), avec les
+--           colonnes code_postal, ville, latitude, longitude, geopoint, statut_gab, type_gab_e_i.
 -- Sortie  : une ligne par GAB et par jour, du premier jour d'opération du GAB jusqu'à la fin des données
 --           (jusqu'à son dernier jour d'opération s'il est FERME), y compris les jours sans opération (0).
---           Les GAB présents dans les opérations mais absents du référentiel sont gardés (dans_referentiel = 0).
--- Lecture : la table des opérations est lue 2 fois : une fois pour les bornes de chaque GAB (3 colonnes,
---           GROUP BY GAB, rapide), une fois pour les agrégats. 3 fonctions de fenêtre au niveau opération.
+-- Lecture : la table est lue 2 fois : une fois pour les bornes et l'identité de chaque GAB (GROUP BY GAB, rapide),
+--           une fois pour les agrégats. 3 fonctions de fenêtre au niveau opération.
 -- Test    : ajouter AND date_operation LIKE '__102026' dans les 2 WHERE marqués -- TEST pour un seul mois.
 -- Règles  : compteurs et sommes uniquement ; classification faite une fois au niveau opération ;
 --           toutes les opérations gardées puis qualifiées ; aucune détection dans la fiche.
@@ -26,18 +26,15 @@ FROM (
         PMOD(DATEDIFF(cal.date_jour, '1900-01-01'), 7) + 1                 AS jour_semaine,   -- 1 = lundi
         CASE WHEN PMOD(DATEDIFF(cal.date_jour, '1900-01-01'), 7) >= 5 THEN 1 ELSE 0 END AS week_end,
 
-        -- infos GAB (code regate depuis les opérations, le reste depuis le référentiel final)
+        -- identité du GAB (valeurs vues dans la table jointe)
         cal.code_site_implantation,
         cal.statut_gab,
         cal.type_gab_e_i,
-        cal.code_entite_de_gestion,
         cal.code_postal,
         cal.ville,
         cal.latitude,
         cal.longitude,
         cal.geopoint,
-        cal.niveau_precision,
-        cal.dans_referentiel,
 
         -- période d'activité et jours sans activité
         cal.date_premiere_ope,
@@ -234,77 +231,59 @@ FROM (
         COALESCE(a.nb_billets_valeur_inconnue, 0) AS nb_billets_valeur_inconnue
 
     FROM (
-        -- ---------- calendrier : chaque GAB vu dans les opérations x chaque jour de sa période d'activité
-        SELECT
-            gr.num_automate,
-            gr.code_site_implantation,
-            gr.date_premiere_ope,
-            gr.date_derniere_ope,
-            gr.fin_donnees,
-            gr.statut_gab,
-            gr.type_gab_e_i,
-            gr.code_entite_de_gestion,
-            gr.code_postal,
-            gr.ville,
-            gr.latitude,
-            gr.longitude,
-            gr.geopoint,
-            gr.niveau_precision,
-            gr.dans_referentiel,
-            DATE_ADD(gr.date_premiere_ope, p.pos) AS date_jour
-        FROM (
+        -- ---------- calendrier : chaque GAB x chaque jour de sa période d'activité
         SELECT
             g.num_automate,
             g.code_site_implantation,
+            g.statut_gab,
+            g.type_gab_e_i,
+            g.code_postal,
+            g.ville,
+            g.latitude,
+            g.longitude,
+            g.geopoint,
             g.date_premiere_ope,
             g.date_derniere_ope,
             g.fin_donnees,
-            r.statut_gab,
-            r.type_gab_e_i,
-            r.code_entite_de_gestion,
-            r.cd_pst_ok          AS code_postal,
-            r.ville_ok           AS ville,
-            r.latitude_finale    AS latitude,
-            r.longitude_finale   AS longitude,
-            r.geopoint_final     AS geopoint,
-            r.niveau_precision,
-            CASE WHEN r.num_automate IS NULL THEN 0 ELSE 1 END AS dans_referentiel,
-            -- dernier jour du calendrier de ce GAB : fin des données, ou sa dernière opération s'il est FERME
-            CASE WHEN COALESCE(r.statut_gab, '') = 'FERME' THEN g.date_derniere_ope ELSE g.fin_donnees END AS fin_calendrier
+            DATE_ADD(g.date_premiere_ope, p.pos) AS date_jour
         FROM (
-            -- bornes de chaque GAB (lecture légère de la table des opérations : 3 colonnes, GROUP BY GAB)
+            -- bornes et identité de chaque GAB (lecture légère : GROUP BY GAB)
             SELECT
-                b.num_automate,
-                b.code_site_implantation,
-                b.date_premiere_ope,
-                b.date_derniere_ope,
-                MAX(b.date_derniere_ope) OVER () AS fin_donnees      -- une ligne par GAB : fenêtre légère
+                b.*,
+                MAX(b.date_derniere_ope) OVER () AS fin_donnees,          -- une ligne par GAB : fenêtre légère
+                -- dernier jour du calendrier : fin des données, ou dernière opération si le GAB est FERME
+                CASE WHEN COALESCE(b.statut_gab, '') = 'FERME' THEN b.date_derniere_ope
+                     ELSE MAX(b.date_derniere_ope) OVER () END          AS fin_calendrier
             FROM (
                 SELECT
-                    TRIM(CAST(num_automate AS STRING)) AS num_automate,
-                    MAX(TRIM(CAST(code_site_implantation AS STRING))) AS code_site_implantation,
+                    TRIM(CAST(num_automate AS STRING))                    AS num_automate,
+                    MAX(TRIM(CAST(code_site_implantation AS STRING)))     AS code_site_implantation,
+                    MAX(UPPER(TRIM(CAST(statut_gab AS STRING))))          AS statut_gab,
+                    MAX(TRIM(CAST(type_gab_e_i AS STRING)))               AS type_gab_e_i,
+                    MAX(TRIM(CAST(code_postal AS STRING)))                AS code_postal,
+                    MAX(TRIM(CAST(ville AS STRING)))                      AS ville,
+                    MAX(CAST(latitude AS DOUBLE))                         AS latitude,
+                    MAX(CAST(longitude AS DOUBLE))                        AS longitude,
+                    MAX(CAST(geopoint AS STRING))                         AS geopoint,
                     MIN(CASE WHEN d BETWEEN '2024-01-01' AND CAST(CURRENT_DATE AS STRING) THEN d END) AS date_premiere_ope,
                     MAX(CASE WHEN d BETWEEN '2024-01-01' AND CAST(CURRENT_DATE AS STRING) THEN d END) AS date_derniere_ope
                 FROM (
                     SELECT
-                        num_automate,
-                        code_site_implantation,
+                        num_automate, code_site_implantation, statut_gab, type_gab_e_i,
+                        code_postal, ville, latitude, longitude, geopoint,
                         CAST(CASE WHEN CAST(date_operation AS STRING) LIKE '____-__-__%'
                                   THEN TO_DATE(SUBSTR(CAST(date_operation AS STRING), 1, 10))
                                   ELSE TO_DATE(FROM_UNIXTIME(UNIX_TIMESTAMP(LPAD(CAST(date_operation AS STRING), 8, '0'), 'ddMMyyyy')))
                              END AS STRING) AS d
-                    FROM `base`.`table_operations`
+                    FROM `base`.`table_operations_jointe`
                     WHERE TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte')   -- TEST : AND date_operation LIKE '__102026'
                 ) d0
                 GROUP BY TRIM(CAST(num_automate AS STRING))
             ) b
             WHERE b.date_premiere_ope IS NOT NULL
         ) g
-        LEFT JOIN `base`.`referentiel_gab` r
-          ON TRIM(CAST(r.num_automate AS STRING)) = g.num_automate
-        ) gr
         -- un jour par position, du premier jour d'opération au dernier jour du calendrier
-        LATERAL VIEW POSEXPLODE(SPLIT(SPACE(DATEDIFF(gr.fin_calendrier, gr.date_premiere_ope)), ' ')) p AS pos, val
+        LATERAL VIEW POSEXPLODE(SPLIT(SPACE(DATEDIFF(g.fin_calendrier, g.date_premiere_ope)), ' ')) p AS pos, val
     ) cal
 
     LEFT JOIN (
@@ -592,7 +571,7 @@ FROM (
                         WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'COS' THEN 'cos'
                         ELSE 'autre'
                     END                                                                        AS cat_reseau
-                FROM `base`.`table_operations`
+                FROM `base`.`table_operations_jointe`
                 WHERE TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait', 'Capture de Carte')   -- TEST : AND date_operation LIKE '__102026'
             ) o
         ) ops
