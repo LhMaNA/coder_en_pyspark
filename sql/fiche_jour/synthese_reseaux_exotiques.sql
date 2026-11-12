@@ -69,3 +69,31 @@ JOIN (
 WHERE t.nb >= 3
 ORDER BY t.nb DESC, fois_l_habitude DESC
 LIMIT 40
+;
+
+-- -----------------------------------------------------------------------------------------------------
+-- 3) Rafales coordonnées : jours où plusieurs GAB d'un même département ont eu >= 5 retraits du même réseau
+--    exotique (catalogue n° 20, attaque coordonnée). Une rafale isolée peut être un groupe de touristes ;
+--    la même rafale sur 3 GAB du même département le même jour ressemble à une fraude organisée.
+-- -----------------------------------------------------------------------------------------------------
+SELECT
+    date_jour,
+    departement,
+    reseau,
+    COUNT(*)                                   AS nb_gab_en_rafale,
+    SUM(nb)                                    AS retraits_cumules,
+    CONCAT_WS(', ', COLLECT_LIST(num_automate)) AS gab
+FROM (
+    SELECT num_automate, date_jour, SUBSTR(LPAD(CAST(code_postal AS STRING), 5, '0'), 1, 2) AS departement, 'UnionPay (UPI)' AS reseau, nb_ret_cup AS nb FROM `fiche_jour`
+    UNION ALL
+    SELECT num_automate, date_jour, SUBSTR(LPAD(CAST(code_postal AS STRING), 5, '0'), 1, 2), 'American Express', nb_ret_amex FROM `fiche_jour`
+    UNION ALL
+    SELECT num_automate, date_jour, SUBSTR(LPAD(CAST(code_postal AS STRING), 5, '0'), 1, 2), 'Diners', nb_ret_diners FROM `fiche_jour`
+    UNION ALL
+    SELECT num_automate, date_jour, SUBSTR(LPAD(CAST(code_postal AS STRING), 5, '0'), 1, 2), 'JCB', nb_ret_jcb FROM `fiche_jour`
+) t
+WHERE nb >= 5
+GROUP BY date_jour, departement, reseau
+HAVING COUNT(*) >= 2
+ORDER BY nb_gab_en_rafale DESC, retraits_cumules DESC
+LIMIT 40
