@@ -1,1 +1,7 @@
-
+> Honnêtement, je ne peux pas te le confirmer à ce stade, et je préfère ne pas te dire de bêtises.
+>
+> Les données brutes que je t'ai transmises sont telles qu'elles sont stockées dans le data lake, je n'ai effectué aucune transformation dessus.
+>
+> En revanche, quand on importe un jeu de données dans DSS, il y a une case à cocher qui définit comment lire les dates et heures qui n'ont pas de fuseau horaire précisé. Si on la coche, on doit ensuite choisir le fuseau à leur attribuer (heure locale, UTC, etc.). De mon côté, je ne la coche pas.
+>
+> Donc je ne sais pas te dire si les données sont nativement en UTC ou non. Je vais poser la question à Hervé et je reviens vers toi dès que j'ai une réponse claire.
