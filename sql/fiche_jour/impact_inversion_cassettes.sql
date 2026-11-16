@@ -9,10 +9,11 @@
 --   gain du client = 10 € x billets cassette 2  ;  perte du client = 10 € x billets cassette 3  ;  net = gain - perte
 --   Par sécurité, une cassette n'est comptée que si sa valeur déclarée est bien 10 € (cassette 2) ou 20 € (cassette 3).
 -- À RÉGLER dans chaque requête (chercher « RÉGLAGE ») : le GAB et le début / la fin de la période (AAAA-MM-JJ HH:MM:SS).
--- Les 5 requêtes sont indépendantes :
+-- Les 6 requêtes sont indépendantes :
 --   1) la synthèse en retraits     2) la synthèse en clients (une carte = un client)
 --   3) le détail heure par heure   4) la liste des clients, du plus gagnant au plus lésé
 --   5) le détail de chaque transaction (ce que le client a demandé, les billets de chaque cassette, ce qu'il a reçu)
+--   6) la synthèse jour par jour
 -- =====================================================================================================
 
 -- -----------------------------------------------------------------------------------------------------
@@ -225,4 +226,51 @@ FROM (
 ) t
 WHERE horodatage >= '2026-01-01 12:00:00' AND horodatage < '2026-01-02 18:00:00'     -- RÉGLAGE : la période
 ORDER BY horodatage
+;
+
+
+-- -----------------------------------------------------------------------------------------------------
+-- 6) JOUR PAR JOUR : la même synthèse, une ligne par jour (retraits, clients, euros)
+--    Un client est compté gagnant / lésé sur son bilan de la journée.
+-- -----------------------------------------------------------------------------------------------------
+SELECT
+    date_jour,
+    SUM(nb_retraits)                                                 AS retraits_aboutis,
+    SUM(nb_retraits_concernes)                                       AS retraits_concernes,
+    SUM(CASE WHEN nb_retraits_concernes > 0 THEN 1 ELSE 0 END)       AS clients_concernes,
+    SUM(CASE WHEN net > 0 THEN 1 ELSE 0 END)                         AS clients_gagnants,
+    SUM(CASE WHEN net < 0 THEN 1 ELSE 0 END)                         AS clients_leses,
+    SUM(trop)                                                        AS euros_donnes_en_trop,
+    SUM(moins)                                                       AS euros_donnes_en_moins,
+    SUM(net)                                                         AS perte_nette_banque_euros,
+    SUM(CASE WHEN nb_retraits_concernes >= 2 THEN 1 ELSE 0 END)      AS clients_revenus_plusieurs_fois
+FROM (
+    -- une ligne par client et par jour
+    SELECT
+        date_jour,
+        num_carte,
+        COUNT(*)                                                     AS nb_retraits,
+        SUM(CASE WHEN b10 + b20 > 0 THEN 1 ELSE 0 END)               AS nb_retraits_concernes,
+        SUM(10 * b10)                                                AS trop,
+        SUM(10 * b20)                                                AS moins,
+        SUM(10 * (b10 - b20))                                        AS net
+    FROM (
+        SELECT
+            TRIM(CAST(num_carte AS STRING))                                          AS num_carte,
+            CASE WHEN CAST(date_operation AS STRING) LIKE '____-__-__%'
+                 THEN TO_DATE(SUBSTR(CAST(date_operation AS STRING), 1, 10))
+                 ELSE TO_DATE(FROM_UNIXTIME(UNIX_TIMESTAMP(LPAD(CAST(date_operation AS STRING), 8, '0'), 'ddMMyyyy')))
+            END                                                                      AS date_jour,
+            CASE WHEN CAST(val_coupurek7_2 AS INT) = 10 THEN COALESCE(CAST(nb_billetsk7_2 AS INT), 0) ELSE 0 END AS b10,   -- cassette 2
+            CASE WHEN CAST(val_coupurek7_3 AS INT) = 20 THEN COALESCE(CAST(nb_billetsk7_3 AS INT), 0) ELSE 0 END AS b20    -- cassette 3
+        FROM `base`.`table_operations_jointe`
+        WHERE TRIM(CAST(num_automate AS STRING)) = '000000'                          -- RÉGLAGE : le GAB
+          AND TRIM(lib_ope) IN ('Retrait', 'Autorisation-Retrait')
+          AND COALESCE(CAST(top_annul AS INT), 0) <> 1
+    ) o
+    WHERE date_jour BETWEEN '2025-12-31' AND '2026-01-03'                        -- RÉGLAGE : les jours
+    GROUP BY date_jour, num_carte
+) c
+GROUP BY date_jour
+ORDER BY date_jour
 ;
