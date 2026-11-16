@@ -564,11 +564,10 @@ FROM (
                         WHEN LPAD(TRIM(CAST(type_reseau AS STRING)), 2, '0') = '11'  THEN 'cos'
                         WHEN LPAD(TRIM(CAST(type_reseau AS STRING)), 2, '0') = '07'  THEN 'amex'
                         WHEN LPAD(TRIM(CAST(type_reseau AS STRING)), 2, '0') = '12'  THEN 'jcb'
-                        WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'CUP' THEN 'cup'      -- réseau 10 = Trionis, précisé par le code privatif
-                        WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'DIN' THEN 'diners'
-                        WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'AMX' THEN 'amex'
-                        WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'JCB' THEN 'jcb'
-                        WHEN UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'COS' THEN 'cos'
+                        WHEN LPAD(TRIM(CAST(type_reseau AS STRING)), 2, '0') = '10'
+                         AND UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'CUP' THEN 'cup'      -- réseau 10 = Trionis, précisé par le code privatif
+                        WHEN LPAD(TRIM(CAST(type_reseau AS STRING)), 2, '0') = '10'
+                         AND UPPER(TRIM(COALESCE(code_carte_privative, ''))) = 'DIN' THEN 'diners'
                         ELSE 'autre'
                     END                                                                        AS cat_reseau
                 FROM `base`.`table_operations_jointe`

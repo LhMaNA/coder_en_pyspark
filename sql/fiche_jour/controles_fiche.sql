@@ -64,7 +64,7 @@ SELECT 'fiche' AS source,
        SUM(nb_nuit_22h_6h)            AS nb_nuit_22h_6h,
        COUNT(DISTINCT num_automate)   AS nb_gab,
        COUNT(DISTINCT CASE WHEN jour_sans_ligne = 0 THEN date_jour END) AS nb_jours
-FROM `fiche_gab_jour`
+FROM `base`.`fiche_jour`
 WHERE annee = 2026 AND mois = 10;
 
 
@@ -90,7 +90,7 @@ SELECT
               AND b.nb_billets_total <> f.nb_billets_total THEN 1 ELSE 0 END)   AS nb_ecarts_billets
 FROM (
     SELECT num_automate, date_jour, nb_retraits, montant_total, nb_captures, nb_billets_total, jour_sans_ligne
-    FROM `fiche_gab_jour`
+    FROM `base`.`fiche_jour`
     WHERE annee = 2026 AND mois = 10
 ) f
 FULL OUTER JOIN (
@@ -129,7 +129,7 @@ SELECT
          ELSE 'chiffres différents' END AS cas
 FROM (
     SELECT num_automate, date_jour, nb_retraits, montant_total, nb_captures
-    FROM `fiche_gab_jour`
+    FROM `base`.`fiche_jour`
     WHERE annee = 2026 AND mois = 10 AND jour_sans_ligne = 0
 ) f
 FULL OUTER JOIN (

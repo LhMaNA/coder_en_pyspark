@@ -165,10 +165,10 @@ ordre;colonne;groupe;description;jour sans opération
 164;montant_jcb;8. Réseaux de carte;Montant retiré, cartes JCB, réseau 12 (très rare) (€);0
 165;nb_inab_jcb;8. Réseaux de carte;Inaboutis, cartes JCB, réseau 12 (très rare);0
 166;nb_cap_jcb;8. Réseaux de carte;Captures, cartes JCB, réseau 12 (très rare);0
-167;nb_ret_autre;8. Réseaux de carte;Retraits aboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
-168;montant_autre;8. Réseaux de carte;Montant retiré, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0) (€);0
-169;nb_inab_autre;8. Réseaux de carte;Inaboutis, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
-170;nb_cap_autre;8. Réseaux de carte;Captures, cartes autres : réseau vide ou inconnu, codes 04-09, Trionis sans code privatif (doit rester ≈ 0);0
+167;nb_ret_autre;8. Réseaux de carte;Retraits aboutis, cartes autres : réseau vide ou inconnu, codes 04-09, réseau 93 (non identifié, interne probable), Trionis sans code privatif;0
+168;montant_autre;8. Réseaux de carte;Montant retiré, cartes autres : réseau vide ou inconnu, codes 04-09, réseau 93 (non identifié, interne probable), Trionis sans code privatif (€);0
+169;nb_inab_autre;8. Réseaux de carte;Inaboutis, cartes autres : réseau vide ou inconnu, codes 04-09, réseau 93 (non identifié, interne probable), Trionis sans code privatif;0
+170;nb_cap_autre;8. Réseaux de carte;Captures, cartes autres : réseau vide ou inconnu, codes 04-09, réseau 93 (non identifié, interne probable), Trionis sans code privatif;0
 171;nb_ret_trionis;8. Réseaux de carte;Retraits aboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
 172;montant_trionis;8. Réseaux de carte;Montant retiré, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners) (€);0
 173;nb_inab_trionis;8. Réseaux de carte;Inaboutis, cartes Trionis (réseau 10, toutes cartes : UnionPay + Diners);0
